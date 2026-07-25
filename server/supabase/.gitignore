@@ -1,0 +1,9 @@
+# Supabase
+.branches
+.temp
+
+# Secrets locales para `supabase functions serve` — NUNCA commitear.
+# `.env.*` cubre .env.local, .env.production, etc.; la plantilla se queda.
+.env
+.env.*
+!.env.example

@@ -1,0 +1,65 @@
+# Reglas de todo el repo. `client/` y `server/supabase/` tienen las suyas
+# propias, más específicas; esto es la red de seguridad que las cubre a las dos
+# y protege la raíz y cualquier carpeta nueva.
+
+# ------------------------------------------------------------
+# Secretos — NUNCA commitear
+# ------------------------------------------------------------
+# Regla amplia a propósito: cualquier .env en cualquier carpeta queda fuera.
+# Las plantillas de ejemplo (sin valores reales) sí se commitean.
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local
+!*.local.example
+
+# Keys sueltas de proveedores de cloud
+*.pem
+*.key
+service-account*.json
+
+# ------------------------------------------------------------
+# Dependencias y builds
+# ------------------------------------------------------------
+node_modules/
+dist/
+dist-ssr/
+build/
+.vite/
+
+# ------------------------------------------------------------
+# Supabase (local dev)
+# ------------------------------------------------------------
+.branches
+.temp
+
+# ------------------------------------------------------------
+# Logs
+# ------------------------------------------------------------
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ------------------------------------------------------------
+# Editor / sistema operativo
+# ------------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ------------------------------------------------------------
+# Claude Code — la config compartida (.claude/settings.json, CLAUDE.md,
+# skills) SÍ se commitea; los permisos locales de cada máquina no.
+# ------------------------------------------------------------
+.claude/settings.local.json

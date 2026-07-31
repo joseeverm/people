@@ -63,3 +63,4 @@ Thumbs.db
 # skills) SÍ se commitea; los permisos locales de cada máquina no.
 # ------------------------------------------------------------
 .claude/settings.local.json
+client/CLAUDE.md

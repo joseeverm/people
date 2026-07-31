@@ -5,8 +5,12 @@ import { ListaPersonas } from './features/personas/ListaPersonas';
 import { DetallePersona } from './features/personas/DetallePersona';
 import { VistaPerfil } from './features/perfil/VistaPerfil';
 import { Ajustes } from './features/ajustes/Ajustes';
+import { Login } from './features/auth/Login';
 import { AvisoSinConexion } from './ui/EstadoConexion';
+import { EstadoSync } from './ui/EstadoSync';
 import { useEstaEnLinea } from './ui/useEstaEnLinea';
+import { useSesion } from './ui/useSesion';
+import { useSync } from './ui/useSync';
 
 /** Iconos inline (24px, trazo en currentColor): solo los tres del nav, no
  *  justifican una dependencia ni un sprite. */
@@ -54,8 +58,27 @@ const NAV = [
   { to: '/ajustes', etiqueta: 'ajustes', Icono: IconoAjustes },
 ];
 
+/** Alto reservado por cada franja de estado apilada sobre la barra inferior. */
+const ALTO_FRANJA_REM = 2;
+
 function App() {
   const enLinea = useEstaEnLinea();
+  const { sesion, cargando } = useSesion();
+  // El ciclo de sync solo arranca con sesión resuelta: sin ella no hay a quién
+  // subir ni de quién bajar (el RLS filtra por auth.uid()).
+  const sync = useSync(!!sesion);
+
+  if (cargando) {
+    return <div className="p-6 text-sm opacity-70">Cargando…</div>;
+  }
+
+  // Puerta de la app: sin sesión no se muestra nada más. `useSesion` lee de
+  // localStorage, así que una sesión ya guardada entra aunque no haya red.
+  if (!sesion) {
+    return <Login />;
+  }
+
+  const franjas = (enLinea ? 0 : 1) + (sync.mostrar ? 1 : 0);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -76,15 +99,16 @@ function App() {
       </nav>
 
       {/* El padding inferior (--espacio-nav-inferior) evita que la barra móvil
-          tape el final de las listas; en escritorio la variable vale 0. Sin
-          conexión se le suma el alto de la franja de aviso, que también es
-          fija y si no se comería las últimas líneas al llegar al fondo. */}
+          tape el final de las listas; en escritorio la variable vale 0. A eso
+          se le suma el alto de las franjas de estado visibles, que también son
+          fijas y si no se comerían las últimas líneas al llegar al fondo.
+          En estilo y no en clase: el número de franjas es dinámico y Tailwind
+          no puede generar la clase de algo que no ve en el código. */}
       <main
-        className={`flex flex-1 flex-col ${
-          enLinea
-            ? 'pb-[var(--espacio-nav-inferior)]'
-            : 'pb-[calc(var(--espacio-nav-inferior)_+_2rem)]'
-        }`}
+        className="flex flex-1 flex-col"
+        style={{
+          paddingBottom: `calc(var(--espacio-nav-inferior) + ${franjas * ALTO_FRANJA_REM}rem)`,
+        }}
       >
         <Routes>
           <Route path="/" element={<Captura />} />
@@ -96,7 +120,20 @@ function App() {
         </Routes>
       </main>
 
-      {!enLinea && <AvisoSinConexion />}
+      {/* Franjas de estado apiladas justo encima de la barra de navegación
+          (o abajo del todo en escritorio, donde el nav va arriba). */}
+      <div className="fixed inset-x-0 bottom-[calc(var(--nav-inferior)+var(--safe-abajo))] z-30 md:bottom-0">
+        {!enLinea && <AvisoSinConexion />}
+        {sync.mostrar && (
+          <EstadoSync
+            pendientes={sync.pendientes}
+            subiendo={sync.subiendo}
+            progreso={sync.progreso}
+            error={sync.error}
+            onReintentar={sync.sincronizar}
+          />
+        )}
+      </div>
 
       {/* Móvil: barra fija abajo, al alcance del pulgar. El padding inferior es
           el safe area de iOS, para no quedar bajo la barra de gestos. */}

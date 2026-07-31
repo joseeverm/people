@@ -14,7 +14,7 @@
  *    `senales`.
  */
 
-import Dexie, { type EntityTable } from 'dexie';
+import Dexie, { type EntityTable, type Table } from 'dexie';
 import type {
   Persona,
   Senal,
@@ -23,10 +23,33 @@ import type {
   PerfilGenerado,
   ExportBundle,
 } from '../core/esquema';
-import type { Repository } from './repository';
+import type { EntidadSync, OperacionOutbox, OperacionPendiente } from './outbox';
+import type { LoteBajada, Repository, ResultadoBajadaTabla } from './repository';
 
 /** Estados de CapturaPendiente que ya no cuentan como "pendientes" para la UI. */
 const ESTADOS_RESUELTOS: CapturaPendiente['estado'][] = ['confirmada', 'sincronizada'];
+
+/** Fila de `syncMeta`. Almacenamiento puro clave→valor: el significado de las
+ *  claves lo pone sync.ts, no esta capa. */
+interface MetaSync {
+  clave: string;
+  valor: string;
+}
+
+const SIN_CAMBIOS: ResultadoBajadaTabla = { insertadas: 0, actualizadas: 0, omitidas: 0 };
+
+/**
+ * Dexie deriva de T tanto el tipo de la clave como el de inserción (donde `id`
+ * pasa a ser opcional). Con un T todavía sin instanciar eso no resuelve, y los
+ * helpers genéricos de la bajada dejan de compilar por `anyOf(string[])`.
+ *
+ * Las cuatro tablas del pull tienen `id: string` obligatorio —los ids los
+ * genera el client con crypto.randomUUID() antes de escribir—, así que esta
+ * vista describe la realidad; no es un cast de conveniencia para callar a tsc.
+ */
+function comoTablaDeIds<T extends { id: string }>(t: EntityTable<T, 'id'>): Table<T, string> {
+  return t as unknown as Table<T, string>;
+}
 
 export class DexieRepo extends Dexie implements Repository {
   personas!: EntityTable<Persona, 'id'>;
@@ -34,6 +57,8 @@ export class DexieRepo extends Dexie implements Repository {
   capturasPendientes!: EntityTable<CapturaPendiente, 'idLocal'>;
   predicciones!: EntityTable<Prediccion, 'id'>;
   perfiles!: EntityTable<PerfilGenerado, 'id'>;
+  outbox!: EntityTable<OperacionOutbox, 'id'>;
+  syncMeta!: EntityTable<MetaSync, 'clave'>;
 
   constructor() {
     super('perfilador');
@@ -45,6 +70,34 @@ export class DexieRepo extends Dexie implements Repository {
       predicciones: 'id, personaId, estado, dominio',
       perfiles: 'id, personaId, generadoEn',
     });
+    // v2: cola de subida. Dexie conserva las tablas de v1 tal cual; los datos
+    // que ya existían NO se encolan (nunca estuvieron en el servidor y no hay
+    // pull todavía para reconciliarlos) — ver nota en README/CLAUDE.md.
+    // `++id` autoincremental: es lo que da el orden FIFO de la cola.
+    this.version(2).stores({
+      outbox: '++id, entidad, creadoEn',
+    });
+    // v3: metadatos del pull. Guarda el cursor por entidad (la mayor marca
+    // `updated_at` que mandó el SERVIDOR) y la última sincronización correcta.
+    // Que no exista cursor es justamente lo que marca "primera carga": un
+    // dispositivo nuevo baja el historial entero.
+    this.version(3).stores({
+      syncMeta: 'clave',
+    });
+  }
+
+  /**
+   * Encola una operación para el servidor. SIEMPRE debe llamarse dentro de la
+   * misma transacción que la escritura local que la origina: si Dexie revierte,
+   * se va la escritura y la operación encolada juntas.
+   */
+  private encolar(op: OperacionPendiente, operacion: 'insert' | 'update') {
+    return this.outbox.add({
+      ...op,
+      operacion,
+      creadoEn: new Date().toISOString(),
+      intentos: 0,
+    } as OperacionOutbox);
   }
 
   // ------------------------------------------------------------
@@ -61,12 +114,18 @@ export class DexieRepo extends Dexie implements Repository {
       id: crypto.randomUUID(),
       creadaEn: new Date().toISOString(),
     };
-    await this.personas.add(persona);
+    await this.transaction('rw', this.personas, this.outbox, async () => {
+      await this.personas.add(persona);
+      await this.encolar({ entidad: 'persona', payload: persona }, 'insert');
+    });
     return persona;
   }
 
   async actualizarPersona(p: Persona): Promise<void> {
-    await this.personas.put(p);
+    await this.transaction('rw', this.personas, this.outbox, async () => {
+      await this.personas.put(p);
+      await this.encolar({ entidad: 'persona', payload: p }, 'update');
+    });
   }
 
   // ------------------------------------------------------------
@@ -75,7 +134,13 @@ export class DexieRepo extends Dexie implements Repository {
 
   async agregarSenal(s: Omit<Senal, 'id'>): Promise<Senal> {
     const senal: Senal = { ...s, id: crypto.randomUUID() };
-    await this.senales.add(senal);
+    // Dexie anida transacciones: si ya hay una abierta que incluya estas dos
+    // tablas (resolverCaptura, resolverPrediccionConVerificacion), esto se
+    // suma a ella en vez de abrir otra.
+    await this.transaction('rw', this.senales, this.outbox, async () => {
+      await this.senales.add(senal);
+      await this.encolar({ entidad: 'senal', payload: senal }, 'insert');
+    });
     return senal;
   }
 
@@ -117,10 +182,17 @@ export class DexieRepo extends Dexie implements Repository {
   }
 
   async resolverCaptura(idLocal: string, senal: Omit<Senal, 'id'>): Promise<void> {
-    await this.transaction('rw', this.capturasPendientes, this.senales, async () => {
-      await this.agregarSenal(senal);
-      await this.capturasPendientes.update(idLocal, { estado: 'confirmada' });
-    });
+    // `outbox` entra en el ámbito porque agregarSenal encola dentro.
+    await this.transaction(
+      'rw',
+      this.capturasPendientes,
+      this.senales,
+      this.outbox,
+      async () => {
+        await this.agregarSenal(senal);
+        await this.capturasPendientes.update(idLocal, { estado: 'confirmada' });
+      }
+    );
   }
 
   // ------------------------------------------------------------
@@ -133,7 +205,10 @@ export class DexieRepo extends Dexie implements Repository {
       id: crypto.randomUUID(),
       creadaEn: new Date().toISOString(),
     };
-    await this.predicciones.add(prediccion);
+    await this.transaction('rw', this.predicciones, this.outbox, async () => {
+      await this.predicciones.add(prediccion);
+      await this.encolar({ entidad: 'prediccion', payload: prediccion }, 'insert');
+    });
     return prediccion;
   }
 
@@ -142,12 +217,17 @@ export class DexieRepo extends Dexie implements Repository {
     estado: Prediccion['estado'],
     senalVerificacion: string
   ): Promise<void> {
-    await this.transaction('rw', this.predicciones, async () => {
+    await this.transaction('rw', this.predicciones, this.outbox, async () => {
       const actual = await this.predicciones.get(id);
       if (!actual) throw new Error(`Predicción ${id} no existe.`);
       if (actual.estado !== 'pendiente')
         throw new Error(`La predicción ya fue resuelta (${actual.estado}); no se puede volver a resolver.`);
       await this.predicciones.update(id, { estado, resueltaPor: senalVerificacion });
+      // El payload del outbox es la entidad COMPLETA, no el parche: quien sube
+      // no tiene que reconstruir el estado previo ni depende del orden con
+      // otras actualizaciones de la misma fila.
+      const actualizada: Prediccion = { ...actual, estado, resueltaPor: senalVerificacion };
+      await this.encolar({ entidad: 'prediccion', payload: actualizada }, 'update');
     });
   }
 
@@ -156,13 +236,16 @@ export class DexieRepo extends Dexie implements Repository {
     estado: Extract<Prediccion['estado'], 'acertada' | 'parcial' | 'fallida'>,
     senal: Omit<Senal, 'id'>
   ): Promise<Senal> {
-    return this.transaction('rw', this.predicciones, this.senales, async () => {
+    return this.transaction('rw', this.predicciones, this.senales, this.outbox, async () => {
       const actual = await this.predicciones.get(prediccionId);
       if (!actual) throw new Error(`Predicción ${prediccionId} no existe.`);
       if (actual.estado !== 'pendiente')
         throw new Error(`La predicción ya fue resuelta (${actual.estado}); no se puede volver a resolver.`);
+      // agregarSenal ya encola su propio insert; aquí solo falta la predicción.
       const creada = await this.agregarSenal(senal);
       await this.predicciones.update(prediccionId, { estado, resueltaPor: creada.id });
+      const actualizada: Prediccion = { ...actual, estado, resueltaPor: creada.id };
+      await this.encolar({ entidad: 'prediccion', payload: actualizada }, 'update');
       return creada;
     });
   }
@@ -177,7 +260,10 @@ export class DexieRepo extends Dexie implements Repository {
 
   async guardarPerfil(p: Omit<PerfilGenerado, 'id'>): Promise<PerfilGenerado> {
     const perfil: PerfilGenerado = { ...p, id: crypto.randomUUID() };
-    await this.perfiles.add(perfil);
+    await this.transaction('rw', this.perfiles, this.outbox, async () => {
+      await this.perfiles.add(perfil);
+      await this.encolar({ entidad: 'perfil', payload: perfil }, 'insert');
+    });
     return perfil;
   }
 
@@ -185,6 +271,179 @@ export class DexieRepo extends Dexie implements Repository {
     const perfiles = await this.perfiles.where('personaId').equals(personaId).toArray();
     if (perfiles.length === 0) return null;
     return perfiles.reduce((mas, p) => (p.generadoEn > mas.generadoEn ? p : mas));
+  }
+
+  // ------------------------------------------------------------
+  // outbox (lo consume sync.ts; la UI solo lee el contador)
+  // ------------------------------------------------------------
+
+  /** En orden FIFO: el autoincremental de Dexie es el orden de encolado. */
+  async operacionesPendientes(limite = 200): Promise<OperacionOutbox[]> {
+    return this.outbox.orderBy('id').limit(limite).toArray();
+  }
+
+  async contarPendientes(): Promise<number> {
+    return this.outbox.count();
+  }
+
+  async descartarOperacion(id: number): Promise<void> {
+    await this.outbox.delete(id);
+  }
+
+  /** Deja la operación en la cola y anota el intento fallido. Nada se descarta
+   *  por número de intentos: perder una escritura en silencio sería peor que
+   *  reintentarla para siempre y que se vea en el indicador. */
+  async marcarIntentoFallido(id: number, error: string): Promise<void> {
+    await this.transaction('rw', this.outbox, async () => {
+      const op = await this.outbox.get(id);
+      if (!op) return;
+      await this.outbox.update(id, { intentos: op.intentos + 1, ultimoError: error });
+    });
+  }
+
+  /**
+   * Encola todo lo local que aún no esté en la cola. Ver el contrato en
+   * repository.ts para el porqué (backup restaurado / datos pre-outbox).
+   *
+   * La operación elegida por entidad NO es casual:
+   *  - inmutables ('senal', 'perfil') → 'insert'. Si ya estaban arriba, el
+   *    23505 se trata como éxito y no se toca la fila del servidor, que es
+   *    justo lo que se quiere de algo inmutable.
+   *  - mutables ('persona', 'prediccion') → 'update', que sube como upsert:
+   *    exista o no en el servidor, queda con el estado local, que es lo que
+   *    pide reparar una restauración.
+   *
+   * Todo en una transacción: o se encola el conjunto entero o nada, para no
+   * dejar una reparación a medias que parezca completa.
+   */
+  async encolarTodoLoLocal(): Promise<number> {
+    return this.transaction(
+      'rw',
+      this.personas,
+      this.senales,
+      this.predicciones,
+      this.perfiles,
+      this.outbox,
+      async () => {
+        const yaEncolado = new Set(
+          (await this.outbox.toArray()).map(op => `${op.entidad}:${op.payload.id}`)
+        );
+        let encoladas = 0;
+
+        // En este orden para que el FIFO suba cada persona antes que lo que
+        // cuelga de ella. Sin claves foráneas no es obligatorio, pero deja el
+        // servidor en un estado coherente en todo momento durante la subida.
+        for (const p of await this.personas.toArray()) {
+          if (yaEncolado.has(`persona:${p.id}`)) continue;
+          await this.encolar({ entidad: 'persona', payload: p }, 'update');
+          encoladas++;
+        }
+        for (const s of await this.senales.toArray()) {
+          if (yaEncolado.has(`senal:${s.id}`)) continue;
+          await this.encolar({ entidad: 'senal', payload: s }, 'insert');
+          encoladas++;
+        }
+        for (const p of await this.predicciones.toArray()) {
+          if (yaEncolado.has(`prediccion:${p.id}`)) continue;
+          await this.encolar({ entidad: 'prediccion', payload: p }, 'update');
+          encoladas++;
+        }
+        for (const p of await this.perfiles.toArray()) {
+          if (yaEncolado.has(`perfil:${p.id}`)) continue;
+          await this.encolar({ entidad: 'perfil', payload: p }, 'insert');
+          encoladas++;
+        }
+
+        return encoladas;
+      }
+    );
+  }
+
+  // ------------------------------------------------------------
+  // bajada (pull) — escribe SIN encolar, para no reenviar lo que ya vino
+  // ------------------------------------------------------------
+
+  async aplicarBajada(lote: LoteBajada): Promise<ResultadoBajadaTabla> {
+    switch (lote.entidad) {
+      // Inmutables: si ya está, no puede haber cambiado.
+      case 'senal':
+        return this.aplicarInmutables(comoTablaDeIds(this.senales), lote.filas);
+      case 'perfil':
+        return this.aplicarInmutables(comoTablaDeIds(this.perfiles), lote.filas);
+      // Mutables: gana el servidor salvo que lo local esté sin subir.
+      case 'persona':
+        return this.aplicarMutables(comoTablaDeIds(this.personas), lote.filas, 'persona');
+      case 'prediccion':
+        return this.aplicarMutables(comoTablaDeIds(this.predicciones), lote.filas, 'prediccion');
+    }
+  }
+
+  // `Table<T, string>` y no `EntityTable<T, 'id'>`: con un T todavía sin
+  // instanciar, Dexie no puede resolver el tipo de la clave y `anyOf(string[])`
+  // deja de compilar. Declarar la clave como string directamente lo evita.
+  private async aplicarInmutables<T extends { id: string }>(
+    tabla: Table<T, string>,
+    filas: T[]
+  ): Promise<ResultadoBajadaTabla> {
+    if (filas.length === 0) return SIN_CAMBIOS;
+    return this.transaction('rw', tabla, async () => {
+      const ids = filas.map(f => f.id);
+      const ya = new Set(await tabla.where('id').anyOf(ids).primaryKeys());
+      const nuevas = filas.filter(f => !ya.has(f.id));
+      // bulkAdd y no bulkPut: sobrescribir una señal o un perfil ya existente
+      // rompería la inmutabilidad aunque el contenido fuera idéntico.
+      if (nuevas.length > 0) await tabla.bulkAdd(nuevas);
+      return {
+        insertadas: nuevas.length,
+        actualizadas: 0,
+        omitidas: filas.length - nuevas.length,
+      };
+    });
+  }
+
+  private async aplicarMutables<T extends { id: string }>(
+    tabla: Table<T, string>,
+    filas: T[],
+    entidad: EntidadSync
+  ): Promise<ResultadoBajadaTabla> {
+    if (filas.length === 0) return SIN_CAMBIOS;
+    return this.transaction('rw', tabla, this.outbox, async () => {
+      // Los ids protegidos se leen DENTRO de la transacción a propósito: si se
+      // leyeran antes, una escritura local entre medias encolaría una operación
+      // que este mismo lote pisaría acto seguido, y ese cambio se perdería sin
+      // dar error.
+      const pendientes = await this.outbox.where('entidad').equals(entidad).toArray();
+      const protegidos = new Set(pendientes.map(op => op.payload.id));
+
+      const aplicables = filas.filter(f => !protegidos.has(f.id));
+      const existentes = new Set(
+        await tabla
+          .where('id')
+          .anyOf(aplicables.map(f => f.id))
+          .primaryKeys()
+      );
+      if (aplicables.length > 0) await tabla.bulkPut(aplicables);
+
+      const actualizadas = aplicables.filter(f => existentes.has(f.id)).length;
+      return {
+        insertadas: aplicables.length - actualizadas,
+        actualizadas,
+        omitidas: filas.length - aplicables.length,
+      };
+    });
+  }
+
+  // ------------------------------------------------------------
+  // metadatos de sincronización
+  // ------------------------------------------------------------
+
+  async leerMeta(clave: string): Promise<string | null> {
+    const fila = await this.syncMeta.get(clave);
+    return fila?.valor ?? null;
+  }
+
+  async guardarMeta(clave: string, valor: string): Promise<void> {
+    await this.syncMeta.put({ clave, valor });
   }
 
   // ------------------------------------------------------------
@@ -217,6 +476,18 @@ export class DexieRepo extends Dexie implements Repository {
    * `capturasPendientes` NO se toca a propósito: el ExportBundle no la
    * incluye, así que borrarla destruiría notas sin clasificar que ningún
    * backup podría devolver (invariante: la captura nunca se pierde).
+   *
+   * ⚠️ TAMPOCO encola nada en el outbox, y eso deja el local divergido del
+   * servidor a propósito. Un import es un reemplazo total: propagarlo exigiría
+   * BORRAR en remoto lo que el backup no trae, y este esquema no tiene DELETE
+   * (señales inmutables, perfiles históricos).
+   *
+   * Los cursores de `syncMeta` se dejan INTACTOS, y eso también es deliberado:
+   * reiniciarlos haría que el siguiente pull rebajara del servidor todo lo que
+   * el backup justamente no traía (las señales son inmutables: al no existir en
+   * local se reinsertarían), deshaciendo la restauración. El precio es que lo
+   * que el backup omitió sigue vivo en el servidor y no vuelve — restaurar una
+   * copia es una operación local, no una forma de revertir el servidor.
    */
   async importar(b: ExportBundle): Promise<void> {
     await this.transaction(

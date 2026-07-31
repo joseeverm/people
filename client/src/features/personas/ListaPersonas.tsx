@@ -3,12 +3,13 @@
  * por cada Persona se piden sus señales y predicciones y se recalcula
  * su EstadoConocimiento con calcularEstadoConocimiento().
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { EstadoConocimiento, Persona } from '../../core/esquema';
 import { NOMBRE_NIVEL } from '../../core/esquema';
 import { calcularEstadoConocimiento, datosRadar } from '../../core/conocimiento';
 import { repo } from '../../data/dexie-repo';
+import { useDatosBajados } from '../../ui/useDatosBajados';
 import { NuevaPersonaForm } from './NuevaPersonaForm';
 import { Radar } from './Radar';
 
@@ -22,7 +23,7 @@ export function ListaPersonas() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const navigate = useNavigate();
 
-  async function cargar() {
+  const cargar = useCallback(async () => {
     const personas = await repo.listarPersonas();
     const conEstado = await Promise.all(
       personas.map(async persona => {
@@ -34,11 +35,15 @@ export function ListaPersonas() {
       })
     );
     setFilas(conEstado);
-  }
+  }, []);
 
   useEffect(() => {
     cargar();
-  }, []);
+  }, [cargar]);
+
+  // El pull puede traer personas o señales del otro dispositivo mientras esta
+  // lista está abierta; sin esto habría que salir y volver para verlas.
+  useDatosBajados(cargar);
 
   function onCreada() {
     setMostrarForm(false);

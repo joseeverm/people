@@ -18,6 +18,26 @@ import type {
   PerfilGenerado,
   ExportBundle,
 } from '../core/esquema';
+import type { OperacionOutbox } from './outbox';
+
+/**
+ * Un lote de filas ya BAJADAS del servidor y traducidas al dominio. Unión
+ * discriminada por la misma razón que `OperacionPendiente`: que el repo sepa
+ * en qué tabla escribe sin hacer `as` a ciegas.
+ */
+export type LoteBajada =
+  | { entidad: 'persona'; filas: Persona[] }
+  | { entidad: 'senal'; filas: Senal[] }
+  | { entidad: 'prediccion'; filas: Prediccion[] }
+  | { entidad: 'perfil'; filas: PerfilGenerado[] };
+
+export interface ResultadoBajadaTabla {
+  insertadas: number;
+  actualizadas: number;
+  /** No se tocaron: o son inmutables y ya estaban, o lo local aún no se ha
+   *  subido (hay operación pendiente en el outbox para ese id) y manda. */
+  omitidas: number;
+}
 
 export interface Repository {
   // personas
@@ -54,6 +74,64 @@ export interface Repository {
   // perfiles (snapshots)
   guardarPerfil(p: Omit<PerfilGenerado, 'id'>): Promise<PerfilGenerado>;
   ultimoPerfil(personaId: string): Promise<PerfilGenerado | null>;
+  // ----------------------------------------------------------------
+  // outbox — cola de subida (patrón outbox, ver data/outbox.ts)
+  // ----------------------------------------------------------------
+  // Toda escritura de arriba encola aquí en su MISMA transacción. Estos
+  // métodos existen en el contrato para que `sync.ts` y el indicador de la UI
+  // no tengan que tocar Dexie directo (ver CLAUDE.md).
+
+  /** Pendientes en orden FIFO (el orden en que se encolaron). */
+  operacionesPendientes(limite?: number): Promise<OperacionOutbox[]>;
+  contarPendientes(): Promise<number>;
+  /** Se llama tras subir con éxito: saca la operación de la cola. */
+  descartarOperacion(id: number): Promise<void>;
+  /** Deja la operación encolada e incrementa `intentos`. */
+  marcarIntentoFallido(id: number, error: string): Promise<void>;
+
+  /**
+   * Encola TODO lo local que no tenga ya una operación pendiente, para que la
+   * próxima subida lo empuje al servidor. Repara los dos casos en los que hay
+   * datos locales sin ninguna ruta hacia el servidor:
+   *
+   *  - restaurar un backup: `importar()` no encola nada (ver su comentario),
+   *  - datos creados antes de que el outbox existiera (Dexie v1).
+   *
+   * Idempotente: repetirla no duplica nada, y como los ids los genera el
+   * client, reenviar algo que ya estaba arriba tampoco duplica en el servidor.
+   * Devuelve cuántas operaciones encoló.
+   */
+  encolarTodoLoLocal(): Promise<number>;
+
+  // ----------------------------------------------------------------
+  // bajada (pull) — ver data/sync.ts
+  // ----------------------------------------------------------------
+
+  /**
+   * Aplica filas traídas del servidor. Reconcilia según la entidad:
+   *
+   *  - `senal` y `perfil` son INMUTABLES: si el id ya está, se ignora (no
+   *    puede haber cambiado); si no, se inserta.
+   *  - `persona` y `prediccion` son mutables: gana el servidor, SALVO que
+   *    haya una operación pendiente en el outbox para ese id — eso significa
+   *    que lo local todavía no se ha subido y tiene prioridad.
+   *
+   * NUNCA encola nada: lo que baja del servidor no debe volver a subir (sería
+   * un eco infinito). Por eso el pull escribe por aquí y no por los métodos
+   * normales del repo, que sí encolan.
+   */
+  aplicarBajada(lote: LoteBajada): Promise<ResultadoBajadaTabla>;
+
+  // ----------------------------------------------------------------
+  // metadatos de sincronización (clave → valor)
+  // ----------------------------------------------------------------
+  // Almacén genérico: qué significa cada clave lo decide `sync.ts`. Aquí solo
+  // se guarda la cadena. Es donde vive el cursor del pull (la mayor marca
+  // `updated_at` recibida del SERVIDOR, nunca la hora local del dispositivo).
+
+  leerMeta(clave: string): Promise<string | null>;
+  guardarMeta(clave: string, valor: string): Promise<void>;
+
   // export
   exportar(): Promise<ExportBundle>;
   importar(b: ExportBundle): Promise<void>;

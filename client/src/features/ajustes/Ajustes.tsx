@@ -9,9 +9,12 @@
  * exige confirmación explícita. Si no valida, se muestra el error y la base
  * no se toca.
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ExportBundle } from '../../core/esquema';
 import { repo } from '../../data/dexie-repo';
+import { supabase } from '../../data/supabase';
+import { useSesion } from '../../ui/useSesion';
+import { SeccionSync } from './SeccionSync';
 import {
   contar,
   ErrorImport,
@@ -42,6 +45,56 @@ function describir(r: ResumenBundle): string {
     `${r.predicciones} ${r.predicciones === 1 ? 'predicción' : 'predicciones'}`,
     `${r.perfiles} ${r.perfiles === 1 ? 'perfil' : 'perfiles'}`,
   ].join(' · ');
+}
+
+/**
+ * Cuenta y cierre de sesión. Avisa si quedan operaciones sin subir: al salir
+ * se quedan en el outbox local, y sincronizarían contra la cuenta que entre
+ * después — que en esta app siempre debería ser la misma, pero conviene verlo
+ * antes de salir, no después.
+ */
+function SeccionCuenta() {
+  const { sesion } = useSesion();
+  const [pendientes, setPendientes] = useState(0);
+  const [saliendo, setSaliendo] = useState(false);
+
+  useEffect(() => {
+    repo.contarPendientes().then(setPendientes);
+  }, []);
+
+  async function salir() {
+    setSaliendo(true);
+    try {
+      // 'local': cierra solo esta sesión y no invalida el refresh token en el
+      // resto de dispositivos. Además funciona sin red.
+      await supabase.auth.signOut({ scope: 'local' });
+    } finally {
+      setSaliendo(false);
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-4">
+      <h2 className="text-base font-medium">Cuenta</h2>
+      <p className="text-sm opacity-70">
+        {sesion?.user.email ?? 'Sin sesión'}
+      </p>
+      {pendientes > 0 && (
+        <p className="text-sm text-amber-600">
+          Quedan {pendientes} {pendientes === 1 ? 'operación' : 'operaciones'} sin subir. Se
+          mantienen en este dispositivo hasta que vuelvas a entrar.
+        </p>
+      )}
+      <button
+        type="button"
+        className="min-h-12 w-full rounded-md border border-[var(--border)] px-4 text-sm font-medium disabled:opacity-40 sm:w-auto sm:self-start"
+        disabled={saliendo}
+        onClick={salir}
+      >
+        {saliendo ? 'Cerrando…' : 'Cerrar sesión'}
+      </button>
+    </section>
+  );
 }
 
 export function Ajustes() {
@@ -98,7 +151,13 @@ export function Ajustes() {
     setErrorImport(null);
     try {
       await repo.importar(confirmacion.bundle);
-      setResumenImport(`Importadas ${describir(confirmacion.archivo)}.`);
+      // El import escribe directo en las tablas, sin pasar por el outbox (ver
+      // repo.importar): sin este aviso la sincronización diría "0 subidas" y
+      // parecería que ya está todo arriba.
+      setResumenImport(
+        `Importadas ${describir(confirmacion.archivo)}. Están solo en este ` +
+          'dispositivo: para llevarlas al servidor usa «Subir todo lo local» en Sincronización.'
+      );
       setConfirmacion(null);
     } catch (e) {
       setErrorImport(mensajeError(e));
@@ -110,6 +169,10 @@ export function Ajustes() {
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6 p-4 sm:p-6">
       <h1 className="text-lg font-medium">Ajustes</h1>
+
+      <SeccionCuenta />
+
+      <SeccionSync />
 
       {/* ---------------- Export ---------------- */}
       <section className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-4">

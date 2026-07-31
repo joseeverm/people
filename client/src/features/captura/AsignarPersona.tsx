@@ -67,13 +67,15 @@ export function AsignarPersona({ captura, personas, onAsignada, onPersonaCreada 
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-dashed border-[var(--border)] p-4">
+    <div className="flex flex-col gap-4 rounded-lg border border-dashed border-[var(--border)] p-4">
       <p className="text-left text-sm opacity-80">{captura.textoCrudo}</p>
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="opacity-70">¿De quién es esta nota?</span>
+        {/* Sigue siendo un <select> nativo a propósito: la lista de personas
+            crece sin techo y como chips se volvería inmanejable. */}
         <select
-          className="rounded border border-[var(--border)] bg-transparent p-2"
+          className="min-h-11 rounded border border-[var(--border)] bg-transparent px-2"
           value={principal}
           onChange={e =>
             e.target.value === OPCION_NUEVA ? setCreandoPara('principal') : cambiarPrincipal(e.target.value)
@@ -92,26 +94,37 @@ export function AsignarPersona({ captura, personas, onAsignada, onPersonaCreada 
       </label>
 
       {creandoPara && (
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex flex-col gap-2 text-sm">
           <input
-            className="rounded border border-[var(--border)] bg-transparent p-2"
+            className="min-h-11 rounded border border-[var(--border)] bg-transparent px-3"
             placeholder="nombre"
             value={nombreNueva}
             onChange={e => setNombreNueva(e.target.value)}
             autoFocus
           />
-          <button type="button" className="rounded border border-[var(--border)] px-2 py-1" onClick={crearPersona}>
-            crear
-          </button>
-          <button type="button" className="opacity-60 hover:opacity-100" onClick={() => setCreandoPara(null)}>
-            cancelar
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="min-h-11 flex-1 rounded border border-[var(--border)] px-3"
+              onClick={crearPersona}
+            >
+              crear
+            </button>
+            <button
+              type="button"
+              className="min-h-11 px-3 opacity-60 hover:opacity-100"
+              onClick={() => setCreandoPara(null)}
+            >
+              cancelar
+            </button>
+          </div>
         </div>
       )}
 
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex min-h-11 items-center gap-3 text-sm">
         <input
           type="checkbox"
+          className="size-5 shrink-0 accent-[var(--accent)]"
           checked={conSecundaria}
           onChange={e => alternarSecundaria(e.target.checked)}
         />
@@ -120,7 +133,7 @@ export function AsignarPersona({ captura, personas, onAsignada, onPersonaCreada 
 
       {conSecundaria && (
         <select
-          className="rounded border border-[var(--border)] bg-transparent p-2 text-sm"
+          className="min-h-11 rounded border border-[var(--border)] bg-transparent px-2 text-sm"
           value={secundaria}
           onChange={e =>
             e.target.value === OPCION_NUEVA ? setCreandoPara('secundaria') : cambiarSecundaria(e.target.value)

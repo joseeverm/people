@@ -26,7 +26,9 @@ export function Radar({ datos, size = 64, etiquetas = false }: Props) {
   const poligono = datos.map((d, i) => punto(i, d.intensidad).join(',')).join(' ');
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    // max-w-full + h-auto: en pantallas muy estrechas el radar se encoge en vez
+    // de desbordar y sacar scroll horizontal (el viewBox mantiene la forma).
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="h-auto max-w-full">
       {[1, 2, 3].map(nivel => (
         <polygon
           key={nivel}

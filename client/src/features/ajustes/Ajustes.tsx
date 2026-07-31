@@ -108,7 +108,7 @@ export function Ajustes() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 p-4 sm:p-6">
       <h1 className="text-lg font-medium">Ajustes</h1>
 
       {/* ---------------- Export ---------------- */}
@@ -120,7 +120,7 @@ export function Ajustes() {
         </p>
         <button
           type="button"
-          className="self-start rounded-md bg-[var(--accent)] px-4 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="min-h-12 w-full rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:self-start"
           disabled={exportando}
           onClick={exportar}
         >
@@ -147,7 +147,7 @@ export function Ajustes() {
         />
         <button
           type="button"
-          className="self-start rounded-md border border-[var(--border)] px-4 py-1.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+          className="min-h-12 w-full rounded-md border border-[var(--border)] px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:self-start"
           disabled={importando}
           onClick={() => inputArchivo.current?.click()}
         >
@@ -174,10 +174,10 @@ export function Ajustes() {
             <p className="text-xs opacity-70">
               Las notas sin clasificar de la bandeja no se tocan.
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
               <button
                 type="button"
-                className="rounded-md bg-red-600 px-4 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-12 rounded-md bg-red-600 px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={importando}
                 onClick={confirmarImport}
               >
@@ -185,7 +185,7 @@ export function Ajustes() {
               </button>
               <button
                 type="button"
-                className="rounded-md border border-[var(--border)] px-4 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-12 rounded-md border border-[var(--border)] px-4 text-sm disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={importando}
                 onClick={() => setConfirmacion(null)}
               >

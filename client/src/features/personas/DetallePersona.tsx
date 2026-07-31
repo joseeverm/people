@@ -37,8 +37,8 @@ export function DetallePersona() {
 
   if (persona === null) {
     return (
-      <div className="mx-auto flex w-full max-w-xl flex-col gap-4 p-6">
-        <Link to="/personas" className="text-sm opacity-70 hover:opacity-100">
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-4 p-4 sm:p-6">
+        <Link to="/personas" className="flex min-h-11 items-center text-sm opacity-70 hover:opacity-100">
           ← personas
         </Link>
         <p className="text-sm">No se encontró esta persona.</p>
@@ -47,22 +47,26 @@ export function DetallePersona() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-3 p-6">
+    <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-4 p-4 sm:p-6">
       <div className="flex w-full">
-        <Link to="/personas" className="text-sm opacity-70 hover:opacity-100">
+        <Link to="/personas" className="flex min-h-11 items-center text-sm opacity-70 hover:opacity-100">
           ← personas
         </Link>
       </div>
-      <h1 className="text-xl font-medium">{persona.nombre}</h1>
+      <h1 className="text-center text-xl font-medium">{persona.nombre}</h1>
       {estado && (
         <>
-          <p className="text-sm opacity-70">
+          <p className="text-center text-sm opacity-70">
             Nivel {estado.nivel} · {NOMBRE_NIVEL[estado.nivel]} · {estado.dominiosCubiertos}/9 dominios
           </p>
-          <Radar datos={datosRadar(estado)} size={240} etiquetas />
+          {/* El radar es un SVG de lado fijo: se deja encoger para que no
+              saque scroll horizontal en pantallas muy estrechas. */}
+          <div className="w-full max-w-[240px]">
+            <Radar datos={datosRadar(estado)} size={240} etiquetas />
+          </div>
           <Link
             to={`/personas/${persona.id}/perfil`}
-            className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white"
+            className="flex min-h-12 w-full items-center justify-center rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white sm:w-auto"
           >
             Ver perfil →
           </Link>

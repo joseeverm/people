@@ -35,10 +35,15 @@ function ContradiccionItem({ contradiccion, senales }: { contradiccion: Contradi
         </p>
       )}
 
-      <div className="mt-2 flex items-center gap-3 pl-6 text-xs opacity-60">
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 pl-6 text-xs opacity-60">
         <span>{CONFIANZA_ETIQUETA[contradiccion.confianza]}</span>
         {contradiccion.senalesEnTension.length > 0 && (
-          <button type="button" className="underline hover:opacity-100" onClick={() => setAbierta(v => !v)}>
+          <button
+            type="button"
+            aria-expanded={abierta}
+            className="flex min-h-11 items-center underline hover:opacity-100"
+            onClick={() => setAbierta(v => !v)}
+          >
             {abierta ? 'ocultar' : `ver señales en tensión (${contradiccion.senalesEnTension.length})`}
           </button>
         )}

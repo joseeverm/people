@@ -38,6 +38,38 @@ function normalizarLista(valores: string[] | undefined | null): string[] {
   return resultado;
 }
 
+/** 'valores_creencias' → 'valores creencias' para leerlo en un chip. */
+function humanizar(slug: string): string {
+  return slug.replace(/_/g, ' ');
+}
+
+/** Botón-chip tocable. min-h-11 = 44px en móvil (raíz 16px): el mínimo cómodo
+ *  para el pulgar. Sustituye a los <select> nativos, incómodos en el celular. */
+function Chip({
+  activo,
+  onClick,
+  children,
+}: {
+  activo: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={activo}
+      onClick={onClick}
+      className={`min-h-11 rounded-full border px-3 text-sm transition ${
+        activo
+          ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+          : 'border-[var(--border)] opacity-70 hover:opacity-100'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 const NOMBRE_TIPO: Record<TipoSenal, string> = {
   observacion: 'observación',
   cita: 'cita',
@@ -102,31 +134,21 @@ function SelectorMultiple({
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-2">
       <span className="text-xs opacity-70">{etiqueta}</span>
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-2">
         {opciones.map(o => {
           const n = normalizar(o);
-          const activo = seleccionados.includes(n);
           return (
-            <button
-              key={n}
-              type="button"
-              onClick={() => alternar(n)}
-              className={`rounded-full border px-2 py-0.5 text-xs ${
-                activo
-                  ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
-                  : 'border-[var(--border)] opacity-70 hover:opacity-100'
-              }`}
-            >
+            <Chip key={n} activo={seleccionados.includes(n)} onClick={() => alternar(n)}>
               {n}
-            </button>
+            </Chip>
           );
         })}
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <input
-          className="flex-1 rounded border border-[var(--border)] bg-transparent p-1 text-xs"
+          className="min-h-11 flex-1 rounded border border-[var(--border)] bg-transparent px-3 text-sm"
           value={nuevo}
           onChange={e => setNuevo(e.target.value)}
           onKeyDown={e => {
@@ -137,7 +159,12 @@ function SelectorMultiple({
           }}
           placeholder="agregar otro…"
         />
-        <button type="button" className="rounded border border-[var(--border)] px-2 py-1 text-xs" onClick={agregarNuevo}>
+        <button
+          type="button"
+          className="size-11 shrink-0 rounded border border-[var(--border)] text-lg"
+          aria-label={`Agregar a ${etiqueta}`}
+          onClick={agregarNuevo}
+        >
           +
         </button>
       </div>
@@ -194,12 +221,11 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-[var(--border)] p-4">
+    <div className="flex flex-col gap-5 rounded-lg border border-[var(--border)] p-4">
       <textarea
-        className="w-full resize-none rounded border border-[var(--border)] bg-transparent p-2 text-sm"
+        className="min-h-24 w-full resize-none rounded border border-[var(--border)] bg-transparent p-3 text-base"
         value={contenido}
         onChange={e => setContenido(e.target.value)}
-        rows={2}
       />
 
       <span className="text-left text-xs opacity-70">{personasDeLaNota.map(p => p.nombre).join(', ')}</span>
@@ -208,22 +234,19 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
         <p className="text-xs text-amber-600">El clasificador pide revisar: {pistasAclaracion.join(', ')}.</p>
       )}
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="opacity-70">Tipo</span>
-        <select
-          className="rounded border border-[var(--border)] bg-transparent p-2"
-          value={tipo}
-          onChange={e => setTipo(e.target.value as TipoSenal)}
-        >
+      <div className="flex flex-col gap-2">
+        <span className="text-xs opacity-70">Tipo</span>
+        <div className="flex flex-wrap gap-2">
           {Object.entries(NOMBRE_TIPO).map(([valor, nombre]) => (
-            <option key={valor} value={valor}>
+            <Chip key={valor} activo={tipo === valor} onClick={() => setTipo(valor as TipoSenal)}>
               {nombre}
-            </option>
+            </Chip>
           ))}
-        </select>
-      </label>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* Apilados en móvil: dos columnas de chips en 375px son ilegibles. */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <SelectorMultiple
           etiqueta="¿Con quién?"
           seleccionados={compania}
@@ -240,58 +263,58 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
         />
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         <span className="text-xs opacity-70">Etiquetas</span>
 
-        <div className="flex flex-wrap gap-1">
-          {etiquetas.map((e, i) => (
-            <span
-              key={`${e.dominio}-${i}`}
-              className="flex items-center gap-1 rounded-full border border-[var(--border)] py-0.5 pl-2 pr-1 text-xs"
-            >
-              {e.dominio}/
-              <select
-                className="rounded bg-transparent"
-                value={e.capa}
-                onChange={ev => cambiarCapaEtiqueta(i, ev.target.value as Capa)}
+        {/* Cada etiqueta puesta es un bloque propio: dominio + su capa como
+            chips, en vez de un <select> diminuto dentro de una píldora. */}
+        {etiquetas.map((e, i) => (
+          <div
+            key={`${e.dominio}-${i}`}
+            className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-3"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm capitalize">{humanizar(e.dominio)}</span>
+              <button
+                type="button"
+                className="flex size-11 shrink-0 items-center justify-center rounded-full text-lg opacity-60 hover:opacity-100"
+                aria-label={`Quitar ${humanizar(e.dominio)}`}
+                onClick={() => quitarEtiqueta(i)}
               >
-                {CAPAS.map(c => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <button type="button" className="opacity-60 hover:opacity-100" onClick={() => quitarEtiqueta(i)}>
                 ×
               </button>
-            </span>
-          ))}
-        </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {CAPAS.map(c => (
+                <Chip key={c} activo={e.capa === c} onClick={() => cambiarCapaEtiqueta(i, c)}>
+                  {c}
+                </Chip>
+              ))}
+            </div>
+          </div>
+        ))}
 
-        <div className="flex items-center gap-2 text-xs">
-          <select
-            className="rounded border border-[var(--border)] bg-transparent p-1"
-            value={nuevoDominio}
-            onChange={e => setNuevoDominio(e.target.value as Dominio)}
-          >
+        <div className="flex flex-col gap-3 rounded-lg border border-dashed border-[var(--border)] p-3">
+          <span className="text-xs opacity-70">Agregar etiqueta</span>
+          <div className="flex flex-wrap gap-2">
             {DOMINIOS.map(d => (
-              <option key={d} value={d}>
-                {d}
-              </option>
+              <Chip key={d} activo={nuevoDominio === d} onClick={() => setNuevoDominio(d)}>
+                {humanizar(d)}
+              </Chip>
             ))}
-          </select>
-          <select
-            className="rounded border border-[var(--border)] bg-transparent p-1"
-            value={nuevaCapa}
-            onChange={e => setNuevaCapa(e.target.value as Capa)}
-          >
+          </div>
+          <div className="flex flex-wrap gap-2">
             {CAPAS.map(c => (
-              <option key={c} value={c}>
+              <Chip key={c} activo={nuevaCapa === c} onClick={() => setNuevaCapa(c)}>
                 {c}
-              </option>
+              </Chip>
             ))}
-          </select>
-          <button type="button" className="rounded border border-[var(--border)] px-2 py-1" onClick={agregarEtiqueta}>
+          </div>
+          <button
+            type="button"
+            className="min-h-11 rounded-md border border-[var(--border)] px-3 text-sm"
+            onClick={agregarEtiqueta}
+          >
             + etiqueta
           </button>
         </div>
@@ -301,7 +324,7 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
 
       <button
         type="button"
-        className="self-start rounded-md bg-[var(--accent)] px-4 py-1.5 text-sm font-medium text-white"
+        className="min-h-12 w-full rounded-md bg-[var(--accent)] px-4 text-base font-medium text-white"
         onClick={confirmar}
       >
         Confirmar

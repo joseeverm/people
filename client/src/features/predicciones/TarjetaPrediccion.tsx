@@ -131,7 +131,8 @@ export function TarjetaPrediccion({ prediccion, senales, onResuelta, nombrePerso
         <div>
           <button
             type="button"
-            className="text-xs underline opacity-60 hover:opacity-100"
+            aria-expanded={verEvidencia}
+            className="flex min-h-11 items-center text-xs underline opacity-60 hover:opacity-100"
             onClick={() => setVerEvidencia(v => !v)}
           >
             {verEvidencia ? 'ocultar evidencia' : `ver evidencia (${prediccion.basadaEn.length})`}
@@ -150,18 +151,17 @@ export function TarjetaPrediccion({ prediccion, senales, onResuelta, nombrePerso
             ¿Qué pasó realmente? ({ETIQUETA_ESTADO[resolviendo]}) — se guarda como verificación
           </label>
           <textarea
-            className="w-full resize-none rounded border border-[var(--border)] bg-transparent p-2 text-sm"
+            className="min-h-24 w-full resize-none rounded border border-[var(--border)] bg-transparent p-3 text-base"
             value={texto}
             onChange={e => setTexto(e.target.value)}
-            rows={2}
             autoFocus
             placeholder="ej. la invité al asado y aceptó sin dudar"
           />
           {error && <p className="text-xs text-red-500">{error}</p>}
-          <div className="flex gap-2">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
             <button
               type="button"
-              className="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-white disabled:opacity-40"
+              className="min-h-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:opacity-40"
               onClick={confirmarResolucion}
               disabled={guardando || !texto.trim()}
             >
@@ -169,7 +169,7 @@ export function TarjetaPrediccion({ prediccion, senales, onResuelta, nombrePerso
             </button>
             <button
               type="button"
-              className="text-sm opacity-60 hover:opacity-100"
+              className="min-h-12 px-4 text-sm opacity-60 hover:opacity-100"
               onClick={() => {
                 setResolviendo(null);
                 setTexto('');
@@ -181,12 +181,14 @@ export function TarjetaPrediccion({ prediccion, senales, onResuelta, nombrePerso
           </div>
         </div>
       ) : (
-        <div className="flex gap-2">
+        /* Los tres veredictos se reparten el ancho: objetivo táctil grande y
+           equidistante, sin botones de 28px pegados unos a otros. */
+        <div className="grid grid-cols-3 gap-2">
           {(['acertada', 'parcial', 'fallida'] as EstadoResolucion[]).map(estado => (
             <button
               key={estado}
               type="button"
-              className="rounded-md border border-[var(--border)] px-3 py-1 text-sm hover:bg-[var(--accent-bg)]"
+              className="min-h-12 rounded-md border border-[var(--border)] px-2 text-sm hover:bg-[var(--accent-bg)]"
               onClick={() => setResolviendo(estado)}
             >
               {ETIQUETA_ESTADO[estado]}

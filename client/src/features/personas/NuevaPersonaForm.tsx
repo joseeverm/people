@@ -37,11 +37,11 @@ export function NuevaPersonaForm({ onCreada }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-3">
+    <div className="flex flex-col gap-3 rounded-lg border border-[var(--border)] p-4">
       <label className="flex flex-col gap-1 text-sm">
         <span className="opacity-70">Nombre</span>
         <input
-          className="rounded border border-[var(--border)] bg-transparent p-2"
+          className="min-h-11 rounded border border-[var(--border)] bg-transparent px-3"
           value={nombre}
           onChange={e => setNombre(e.target.value)}
           autoFocus
@@ -50,7 +50,7 @@ export function NuevaPersonaForm({ onCreada }: Props) {
       <label className="flex flex-col gap-1 text-sm">
         <span className="opacity-70">Aliases (separados por coma)</span>
         <input
-          className="rounded border border-[var(--border)] bg-transparent p-2"
+          className="min-h-11 rounded border border-[var(--border)] bg-transparent px-3"
           value={aliases}
           onChange={e => setAliases(e.target.value)}
           placeholder="Patri, la del camping…"
@@ -59,7 +59,7 @@ export function NuevaPersonaForm({ onCreada }: Props) {
       <label className="flex flex-col gap-1 text-sm">
         <span className="opacity-70">Contextos (separados por coma)</span>
         <input
-          className="rounded border border-[var(--border)] bg-transparent p-2"
+          className="min-h-11 rounded border border-[var(--border)] bg-transparent px-3"
           value={contextos}
           onChange={e => setContextos(e.target.value)}
           placeholder="trabajo, familia…"
@@ -67,7 +67,7 @@ export function NuevaPersonaForm({ onCreada }: Props) {
       </label>
       <button
         type="button"
-        className="self-start rounded-md bg-[var(--accent)] px-4 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+        className="min-h-12 w-full rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:self-start"
         disabled={!nombre.trim() || guardando}
         onClick={crear}
       >

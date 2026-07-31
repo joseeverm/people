@@ -80,17 +80,32 @@ function AfirmacionItem({ afirmacion, senales }: PropsAfirmacion) {
   const info = ESTATUS_INFO[afirmacion.estatus];
 
   return (
-    <div className="rounded-lg border border-[var(--border)] p-3">
-      <button type="button" className="flex w-full items-start gap-2 text-left" onClick={() => setAbierta(v => !v)}>
+    <div className="rounded-lg border border-[var(--border)]">
+      {/* Toda la afirmación (texto + confianza + chevron) es el área de toque:
+          min-h-14 y padding propio, no un renglón de 20px. */}
+      <button
+        type="button"
+        aria-expanded={abierta}
+        className="flex min-h-14 w-full items-start gap-2 p-3 text-left"
+        onClick={() => setAbierta(v => !v)}
+      >
         <span className={`mt-0.5 shrink-0 ${info.color}`} aria-hidden>
           {info.icono}
         </span>
-        <span className="flex-1 text-sm">{afirmacion.texto}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm">{afirmacion.texto}</span>
+          <span className="mt-1 block text-xs opacity-60">{CONFIANZA_ETIQUETA[afirmacion.confianza]}</span>
+        </span>
+        <span
+          className={`mt-0.5 shrink-0 text-xs opacity-50 transition-transform ${abierta ? 'rotate-180' : ''}`}
+          aria-hidden
+        >
+          ▾
+        </span>
       </button>
-      <div className="mt-1 pl-5 text-xs opacity-60">{CONFIANZA_ETIQUETA[afirmacion.confianza]}</div>
 
       {abierta && (
-        <div className="mt-2 border-t border-[var(--border)] pl-5 pt-2">
+        <div className="border-t border-[var(--border)] px-3 pb-3 pl-8 pt-3">
           <ListaEvidencia ids={afirmacion.evidencia} senales={senales} />
         </div>
       )}

@@ -46,12 +46,12 @@ export function ListaPersonas() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 p-4 sm:p-6">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-lg font-medium">Personas</h1>
         <button
           type="button"
-          className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white"
+          className="min-h-11 shrink-0 rounded-md bg-[var(--accent)] px-3 text-sm font-medium text-white"
           onClick={() => setMostrarForm(v => !v)}
         >
           {mostrarForm ? 'cancelar' : '+ nueva persona'}
@@ -70,16 +70,25 @@ export function ListaPersonas() {
           <button
             key={persona.id}
             type="button"
-            className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] p-3 text-left transition hover:border-[var(--accent)]"
+            className="flex min-h-20 items-center justify-between gap-3 rounded-lg border border-[var(--border)] p-4 text-left transition hover:border-[var(--accent)]"
             onClick={() => navigate(`/personas/${persona.id}`)}
           >
-            <div className="flex flex-col gap-0.5">
+            {/* min-w-0: sin esto un nombre largo ensancha la fila y saca
+                scroll horizontal en vez de partirse. */}
+            <div className="flex min-w-0 flex-col gap-1.5">
               <span className="font-medium">{persona.nombre}</span>
-              <span className="text-xs opacity-70">
-                Nivel {estado.nivel} · {NOMBRE_NIVEL[estado.nivel]} · {estado.dominiosCubiertos}/9 dominios
+              {/* El nivel se lee desde la lista, sin entrar al detalle. */}
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs opacity-70">
+                <span className="rounded-full border border-[var(--accent-border)] bg-[var(--accent-bg)] px-2 py-0.5 font-medium text-[var(--accent)]">
+                  Nivel {estado.nivel}
+                </span>
+                <span>{NOMBRE_NIVEL[estado.nivel]}</span>
+                <span>· {estado.dominiosCubiertos}/9 dominios</span>
               </span>
             </div>
-            <Radar datos={datosRadar(estado)} size={56} />
+            <span className="shrink-0">
+              <Radar datos={datosRadar(estado)} size={56} />
+            </span>
           </button>
         ))}
       </div>

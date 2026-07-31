@@ -130,15 +130,15 @@ export function Bandeja() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <Link to="/" className="text-sm opacity-70 hover:opacity-100">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 p-4 sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <Link to="/" className="flex min-h-11 items-center text-sm opacity-70 hover:opacity-100">
           ← captura
         </Link>
         {listasParaClasificar.length > 0 && (
           <button
             type="button"
-            className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-11 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
             onClick={clasificarPendientes}
             disabled={progreso !== null}
           >
@@ -198,7 +198,7 @@ export function Bandeja() {
               key={c.idLocal}
               className="rounded-lg border border-dashed border-[var(--border)] p-4 text-left text-sm opacity-70"
             >
-              {c.textoCrudo}
+              <p>{c.textoCrudo}</p>
               <div className="mt-1 text-xs opacity-60">asignada a {nombres}, lista para clasificar</div>
             </div>
           );

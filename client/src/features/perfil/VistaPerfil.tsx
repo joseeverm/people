@@ -150,8 +150,8 @@ export function VistaPerfil() {
 
   if (persona === null) {
     return (
-      <div className="mx-auto flex w-full max-w-xl flex-col gap-4 p-6">
-        <Link to="/personas" className="text-sm opacity-70 hover:opacity-100">
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-4 p-4 sm:p-6">
+        <Link to="/personas" className="flex min-h-11 items-center text-sm opacity-70 hover:opacity-100">
           ← personas
         </Link>
         <p className="text-sm">No se encontró esta persona.</p>
@@ -160,8 +160,11 @@ export function VistaPerfil() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 p-6">
-      <Link to={`/personas/${persona.id}`} className="text-sm opacity-70 hover:opacity-100">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 p-4 sm:p-6">
+      <Link
+        to={`/personas/${persona.id}`}
+        className="flex min-h-11 items-center text-sm opacity-70 hover:opacity-100"
+      >
         ← {persona.nombre}
       </Link>
 
@@ -185,23 +188,34 @@ export function VistaPerfil() {
         </p>
       </div>
 
-      <div className="flex gap-1 border-b border-[var(--border)]">
-        {(['perfil', 'senales', 'predicciones'] as const).map(p => (
+      {/* Cada pestaña ocupa un tercio del ancho en móvil (objetivo táctil ancho
+          y de 48px de alto). La cuenta va en su propia línea: "Predicciones (3)"
+          en una sola no entra a 375px sin encoger la letra. */}
+      <div className="flex border-b border-[var(--border)]">
+        {(
+          [
+            { id: 'perfil', titulo: 'Perfil', cuenta: null },
+            { id: 'senales', titulo: 'Señales', cuenta: senales.length },
+            {
+              id: 'predicciones',
+              titulo: 'Predicciones',
+              cuenta: predicciones.filter(pr => pr.estado === 'pendiente').length,
+            },
+          ] as const
+        ).map(({ id, titulo, cuenta }) => (
           <button
-            key={p}
+            key={id}
             type="button"
-            className={`px-3 py-2 text-sm ${
-              pestana === p
+            aria-pressed={pestana === id}
+            className={`flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 px-2 text-sm sm:flex-none sm:flex-row sm:gap-1.5 sm:px-4 ${
+              pestana === id
                 ? 'border-b-2 border-[var(--accent)] font-medium'
                 : 'opacity-60 hover:opacity-100'
             }`}
-            onClick={() => setPestana(p)}
+            onClick={() => setPestana(id)}
           >
-            {p === 'perfil'
-              ? 'Perfil'
-              : p === 'senales'
-                ? `Señales (${senales.length})`
-                : `Predicciones (${predicciones.filter(pr => pr.estado === 'pendiente').length})`}
+            <span>{titulo}</span>
+            {cuenta !== null && <span className="text-xs opacity-70">({cuenta})</span>}
           </button>
         ))}
       </div>
@@ -223,10 +237,10 @@ export function VistaPerfil() {
             </p>
           )}
 
-          <div className="flex flex-col items-start gap-1">
+          <div className="flex flex-col items-stretch gap-2 sm:items-start">
             <button
               type="button"
-              className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+              className="min-h-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
               onClick={regenerar}
               disabled={generando || senales.length === 0 || sinSenalesNuevas}
             >

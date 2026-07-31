@@ -15,6 +15,32 @@ const TIPOS: { valor: TipoPrediccion; etiqueta: string }[] = [
   { valor: 'inferida', etiqueta: 'síntesis (inferida, no calibra)' },
 ];
 
+/** Chip tocable de 44px: reemplaza a los <select> nativos, incómodos en móvil. */
+function Chip({
+  activo,
+  onClick,
+  children,
+}: {
+  activo: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={activo}
+      onClick={onClick}
+      className={`min-h-11 rounded-full border px-3 text-sm transition ${
+        activo
+          ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+          : 'border-[var(--border)] bg-[var(--bg)] opacity-70 hover:opacity-100'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 interface Props {
   personaId: string;
   onCreada: () => void;
@@ -66,7 +92,7 @@ export function NuevaPrediccion({ personaId, onCreada }: Props) {
     return (
       <button
         type="button"
-        className="self-start rounded-md border border-[var(--border)] px-3 py-1.5 text-sm hover:bg-[var(--accent-bg)]"
+        className="min-h-12 w-full rounded-md border border-[var(--border)] px-3 text-sm hover:bg-[var(--accent-bg)] sm:w-auto sm:self-start"
         onClick={() => setAbierto(true)}
       >
         + predicción propia
@@ -75,70 +101,59 @@ export function NuevaPrediccion({ personaId, onCreada }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-bg)] p-3">
+    <div className="flex flex-col gap-4 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-bg)] p-4">
       <textarea
-        className="w-full resize-none rounded border border-[var(--border)] bg-transparent p-2 text-sm"
+        className="min-h-24 w-full resize-none rounded border border-[var(--border)] bg-transparent p-3 text-base"
         value={texto}
         onChange={e => setTexto(e.target.value)}
-        rows={2}
         autoFocus
         placeholder="hipótesis comprobable, ej. si la invitan a una fiesta grande, dirá que no"
       />
-      <div className="flex flex-wrap gap-2">
-        <label className="flex flex-col gap-1 text-xs opacity-70">
-          Tipo
-          <select
-            className="rounded border border-[var(--border)] bg-transparent p-1 text-sm"
-            value={tipo}
-            onChange={e => setTipo(e.target.value as TipoPrediccion)}
-          >
-            {TIPOS.map(t => (
-              <option key={t.valor} value={t.valor}>
-                {t.etiqueta}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs opacity-70">
-          Dominio
-          <select
-            className="rounded border border-[var(--border)] bg-transparent p-1 text-sm"
-            value={dominio}
-            onChange={e => setDominio(e.target.value as Dominio)}
-          >
-            {DOMINIOS.map(d => (
-              <option key={d} value={d}>
-                {d.replace(/_/g, ' ')}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs opacity-70">
-          Confianza
-          <select
-            className="rounded border border-[var(--border)] bg-transparent p-1 text-sm"
-            value={confianza}
-            onChange={e => setConfianza(e.target.value as Confianza)}
-          >
-            {CONFIANZAS.map(c => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
+
+      <div className="flex flex-col gap-2">
+        <span className="text-xs opacity-70">Tipo</span>
+        <div className="flex flex-wrap gap-2">
+          {TIPOS.map(t => (
+            <Chip key={t.valor} activo={tipo === t.valor} onClick={() => setTipo(t.valor)}>
+              {t.etiqueta}
+            </Chip>
+          ))}
+        </div>
       </div>
+
+      <div className="flex flex-col gap-2">
+        <span className="text-xs opacity-70">Dominio</span>
+        <div className="flex flex-wrap gap-2">
+          {DOMINIOS.map(d => (
+            <Chip key={d} activo={dominio === d} onClick={() => setDominio(d)}>
+              {d.replace(/_/g, ' ')}
+            </Chip>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <span className="text-xs opacity-70">Confianza</span>
+        <div className="flex flex-wrap gap-2">
+          {CONFIANZAS.map(c => (
+            <Chip key={c} activo={confianza === c} onClick={() => setConfianza(c)}>
+              {c}
+            </Chip>
+          ))}
+        </div>
+      </div>
+
       {error && <p className="text-xs text-red-500">{error}</p>}
-      <div className="flex gap-2">
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
-          className="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-white disabled:opacity-40"
+          className="min-h-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:opacity-40"
           onClick={guardar}
           disabled={guardando || !texto.trim()}
         >
           {guardando ? 'guardando…' : 'guardar'}
         </button>
-        <button type="button" className="text-sm opacity-60 hover:opacity-100" onClick={cerrar}>
+        <button type="button" className="min-h-12 px-4 text-sm opacity-60 hover:opacity-100" onClick={cerrar}>
           cancelar
         </button>
       </div>

@@ -17,6 +17,12 @@
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
+  /* Barra de navegación inferior (solo <768px, ver App.tsx). El contenido
+     reserva este alto + el safe area de iOS para que nada quede tapado. */
+  --nav-inferior: 3.5rem;
+  --safe-abajo: env(safe-area-inset-bottom, 0px);
+  --espacio-nav-inferior: calc(var(--nav-inferior) + var(--safe-abajo) + 1rem);
+
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
   color-scheme: light dark;
@@ -49,8 +55,42 @@
 
 }
 
+/* En escritorio el nav vuelve arriba: no hay barra inferior que esquivar. */
+@media (min-width: 768px) {
+  :root {
+    --espacio-nav-inferior: 0px;
+  }
+}
+
+html {
+  /* `clip` y no `hidden`: corta el desbordamiento horizontal accidental sin
+     crear un contenedor de scroll (que rompería position: sticky/fixed). */
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
+  overflow-x: clip;
+}
+
+/* iOS hace zoom automático al enfocar un control con letra <16px. En móvil se
+   fuerza el mínimo; en escritorio manda la clase de Tailwind del componente. */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* Ninguna palabra larga (URL, nombre pegado) debe ensanchar la vista. */
+p,
+h1,
+h2,
+li,
+dd {
+  overflow-wrap: break-word;
 }
 
 h1,

@@ -38,7 +38,7 @@ function BotonCopiar({ texto, etiqueta }: { texto: string; etiqueta: string }) {
     <button
       type="button"
       onClick={copiar}
-      className="shrink-0 rounded border border-[var(--border)] px-2 py-0.5 text-xs opacity-70 hover:opacity-100"
+      className="min-h-11 shrink-0 rounded border border-[var(--border)] px-3 text-xs opacity-70 hover:opacity-100"
       aria-label={`Copiar ${etiqueta}`}
     >
       {copiado ? 'copiado ✓' : 'copiar'}
@@ -68,8 +68,11 @@ function HuecoItem({ hueco }: { hueco: HuecoInfo }) {
           </div>
           <ul className="flex flex-col gap-2">
             {hueco.preguntasSugeridas.map((pregunta, i) => (
-              <li key={i} className="flex items-start gap-2 rounded-md border border-[var(--border)] bg-[var(--bg)] p-2">
-                <span className="flex-1 text-sm">{pregunta}</span>
+              <li
+                key={i}
+                className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--bg)] p-2 pl-3"
+              >
+                <span className="min-w-0 flex-1 text-sm">{pregunta}</span>
                 <BotonCopiar texto={pregunta} etiqueta="la pregunta" />
               </li>
             ))}

@@ -3,8 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>client</title>
+    <!-- iOS ignora los `icons` del manifest al añadir a la pantalla de inicio:
+         sin esto pone una captura de la página como icono. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
+    <meta name="theme-color" content="#16171d" />
+    <meta name="description" content="Registro de señales y perfiles de las personas que conozco." />
+    <!-- viewport-fit=cover: sin esto env(safe-area-inset-*) vale siempre 0 y la
+         barra de navegación inferior queda bajo la barra de gestos de iOS. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>People</title>
   </head>
   <body>
     <div id="root"></div>

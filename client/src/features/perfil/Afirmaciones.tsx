@@ -82,11 +82,11 @@ function AfirmacionItem({ afirmacion, senales }: PropsAfirmacion) {
   return (
     <div className="rounded-lg border border-[var(--border)]">
       {/* Toda la afirmación (texto + confianza + chevron) es el área de toque:
-          min-h-14 y padding propio, no un renglón de 20px. */}
+          toque-14 y padding propio, no un renglón de 20px. */}
       <button
         type="button"
         aria-expanded={abierta}
-        className="flex min-h-14 w-full items-start gap-2 p-3 text-left"
+        className="flex toque-14 w-full items-start gap-2 p-3 text-left"
         onClick={() => setAbierta(v => !v)}
       >
         <span className={`mt-0.5 shrink-0 ${info.color}`} aria-hidden>

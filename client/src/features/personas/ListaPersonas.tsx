@@ -51,12 +51,12 @@ export function ListaPersonas() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 p-4 sm:p-6">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 p-4 sm:p-6 md:max-w-3xl">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-lg font-medium">Personas</h1>
         <button
           type="button"
-          className="min-h-11 shrink-0 rounded-md bg-[var(--accent)] px-3 text-sm font-medium text-white"
+          className="toque-11 shrink-0 rounded-md bg-[var(--accent)] px-3 text-sm font-medium text-white"
           onClick={() => setMostrarForm(v => !v)}
         >
           {mostrarForm ? 'cancelar' : '+ nueva persona'}
@@ -70,12 +70,14 @@ export function ListaPersonas() {
         <p className="text-sm opacity-70">Todavía no registraste a nadie.</p>
       )}
 
-      <div className="flex flex-col gap-2">
+      {/* Dos columnas en escritorio: una fila de nombre + radar de 56px no
+          llena 768px, y una sola columna deja la mitad derecha vacía. */}
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {filas?.map(({ persona, estado }) => (
           <button
             key={persona.id}
             type="button"
-            className="flex min-h-20 items-center justify-between gap-3 rounded-lg border border-[var(--border)] p-4 text-left transition hover:border-[var(--accent)]"
+            className="flex min-h-20 items-center justify-between gap-3 rounded-lg border border-[var(--border)] p-4 text-left transition hover:border-[var(--accent)] md:min-h-0 md:p-3"
             onClick={() => navigate(`/personas/${persona.id}`)}
           >
             {/* min-w-0: sin esto un nombre largo ensancha la fila y saca

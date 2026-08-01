@@ -32,7 +32,10 @@ export function VistaSenales({ senales }: Props) {
   );
 
   return (
-    <div className="flex flex-col gap-2">
+    // Una sola columna aunque haya sitio: es una cronología y en dos columnas
+    // el orden se leería en zigzag. El ancho sí se limita, que a 900px una
+    // señal de dos frases sale en una línea de 130 caracteres.
+    <div className="flex max-w-2xl flex-col gap-2">
       {ordenadas.map(s => {
         // Señales legadas (previas al cambio) no traen estos campos: ?? [].
         const compania = s.compania ?? [];

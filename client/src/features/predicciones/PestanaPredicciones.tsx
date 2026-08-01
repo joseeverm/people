@@ -35,7 +35,10 @@ export function PestanaPredicciones({ personaId, predicciones, senales, onCambio
       : pendientes.filter(p => p.tipo !== 'inferida');
 
   return (
-    <div className="flex flex-col gap-6">
+    // Sin dos columnas a propósito: resolver una predicción abre un textarea
+    // dentro de la tarjeta, y a media pantalla queda estrecho. Solo se limita
+    // el ancho de lectura.
+    <div className="flex max-w-2xl flex-col gap-6">
       <NuevaPrediccion personaId={personaId} onCreada={onCambio} />
 
       {(['extrapolada', 'inferida'] as TipoPrediccion[]).map(tipo => {

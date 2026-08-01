@@ -55,7 +55,7 @@ export function Login() {
         <label className="flex flex-col gap-1 text-sm">
           <span className="opacity-70">Email</span>
           <input
-            className="min-h-12 rounded-lg border border-[var(--border)] bg-transparent px-3 outline-none focus:border-[var(--accent)]"
+            className="toque-12 rounded-lg border border-[var(--border)] bg-transparent px-3 outline-none focus:border-[var(--accent)]"
             type="email"
             autoComplete="username"
             inputMode="email"
@@ -68,7 +68,7 @@ export function Login() {
         <label className="flex flex-col gap-1 text-sm">
           <span className="opacity-70">Contraseña</span>
           <input
-            className="min-h-12 rounded-lg border border-[var(--border)] bg-transparent px-3 outline-none focus:border-[var(--accent)]"
+            className="toque-12 rounded-lg border border-[var(--border)] bg-transparent px-3 outline-none focus:border-[var(--accent)]"
             type="password"
             autoComplete="current-password"
             value={password}
@@ -84,7 +84,7 @@ export function Login() {
 
         <button
           type="submit"
-          className="min-h-12 rounded-md bg-[var(--accent)] px-4 font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="toque-12 rounded-md bg-[var(--accent)] px-4 font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
           disabled={entrando || !email.trim() || !password}
         >
           {entrando ? 'Entrando…' : 'Entrar'}

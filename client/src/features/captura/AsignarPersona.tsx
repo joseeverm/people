@@ -75,7 +75,7 @@ export function AsignarPersona({ captura, personas, onAsignada, onPersonaCreada 
         {/* Sigue siendo un <select> nativo a propósito: la lista de personas
             crece sin techo y como chips se volvería inmanejable. */}
         <select
-          className="min-h-11 rounded border border-[var(--border)] bg-transparent px-2"
+          className="toque-11 rounded border border-[var(--border)] bg-transparent px-2 md:max-w-xs"
           value={principal}
           onChange={e =>
             e.target.value === OPCION_NUEVA ? setCreandoPara('principal') : cambiarPrincipal(e.target.value)
@@ -96,23 +96,23 @@ export function AsignarPersona({ captura, personas, onAsignada, onPersonaCreada 
       {creandoPara && (
         <div className="flex flex-col gap-2 text-sm">
           <input
-            className="min-h-11 rounded border border-[var(--border)] bg-transparent px-3"
+            className="toque-11 rounded border border-[var(--border)] bg-transparent px-3 md:max-w-xs"
             placeholder="nombre"
             value={nombreNueva}
             onChange={e => setNombreNueva(e.target.value)}
             autoFocus
           />
-          <div className="flex gap-2">
+          <div className="flex gap-2 md:max-w-xs">
             <button
               type="button"
-              className="min-h-11 flex-1 rounded border border-[var(--border)] px-3"
+              className="toque-11 flex-1 rounded border border-[var(--border)] px-3"
               onClick={crearPersona}
             >
               crear
             </button>
             <button
               type="button"
-              className="min-h-11 px-3 opacity-60 hover:opacity-100"
+              className="toque-11 px-3 opacity-60 hover:opacity-100"
               onClick={() => setCreandoPara(null)}
             >
               cancelar
@@ -121,7 +121,7 @@ export function AsignarPersona({ captura, personas, onAsignada, onPersonaCreada 
         </div>
       )}
 
-      <label className="flex min-h-11 items-center gap-3 text-sm">
+      <label className="flex toque-11 items-center gap-3 text-sm">
         <input
           type="checkbox"
           className="size-5 shrink-0 accent-[var(--accent)]"
@@ -133,7 +133,7 @@ export function AsignarPersona({ captura, personas, onAsignada, onPersonaCreada 
 
       {conSecundaria && (
         <select
-          className="min-h-11 rounded border border-[var(--border)] bg-transparent px-2 text-sm"
+          className="toque-11 rounded border border-[var(--border)] bg-transparent px-2 text-sm md:max-w-xs"
           value={secundaria}
           onChange={e =>
             e.target.value === OPCION_NUEVA ? setCreandoPara('secundaria') : cambiarSecundaria(e.target.value)

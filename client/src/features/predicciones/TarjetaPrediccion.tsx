@@ -132,7 +132,7 @@ export function TarjetaPrediccion({ prediccion, senales, onResuelta, nombrePerso
           <button
             type="button"
             aria-expanded={verEvidencia}
-            className="flex min-h-11 items-center text-xs underline opacity-60 hover:opacity-100"
+            className="flex toque-11 items-center text-xs underline opacity-60 hover:opacity-100"
             onClick={() => setVerEvidencia(v => !v)}
           >
             {verEvidencia ? 'ocultar evidencia' : `ver evidencia (${prediccion.basadaEn.length})`}
@@ -151,7 +151,7 @@ export function TarjetaPrediccion({ prediccion, senales, onResuelta, nombrePerso
             ¿Qué pasó realmente? ({ETIQUETA_ESTADO[resolviendo]}) — se guarda como verificación
           </label>
           <textarea
-            className="min-h-24 w-full resize-none rounded border border-[var(--border)] bg-transparent p-3 text-base"
+            className="min-h-24 w-full resize-none rounded border border-[var(--border)] bg-transparent p-3 text-base md:text-sm"
             value={texto}
             onChange={e => setTexto(e.target.value)}
             autoFocus
@@ -161,7 +161,7 @@ export function TarjetaPrediccion({ prediccion, senales, onResuelta, nombrePerso
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
             <button
               type="button"
-              className="min-h-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:opacity-40"
+              className="toque-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:opacity-40"
               onClick={confirmarResolucion}
               disabled={guardando || !texto.trim()}
             >
@@ -169,7 +169,7 @@ export function TarjetaPrediccion({ prediccion, senales, onResuelta, nombrePerso
             </button>
             <button
               type="button"
-              className="min-h-12 px-4 text-sm opacity-60 hover:opacity-100"
+              className="toque-12 px-4 text-sm opacity-60 hover:opacity-100"
               onClick={() => {
                 setResolviendo(null);
                 setTexto('');
@@ -181,14 +181,16 @@ export function TarjetaPrediccion({ prediccion, senales, onResuelta, nombrePerso
           </div>
         </div>
       ) : (
-        /* Los tres veredictos se reparten el ancho: objetivo táctil grande y
-           equidistante, sin botones de 28px pegados unos a otros. */
-        <div className="grid grid-cols-3 gap-2">
+        /* En móvil los tres veredictos se reparten el ancho: objetivo táctil
+           grande y equidistante, sin botones de 28px pegados unos a otros. En
+           escritorio se apoyan a la izquierda con su ancho natural — a tercios
+           salían tres botones enormes para una palabra cada uno. */
+        <div className="grid grid-cols-3 gap-2 md:flex md:flex-wrap">
           {(['acertada', 'parcial', 'fallida'] as EstadoResolucion[]).map(estado => (
             <button
               key={estado}
               type="button"
-              className="min-h-12 rounded-md border border-[var(--border)] px-2 text-sm hover:bg-[var(--accent-bg)]"
+              className="toque-12 rounded-md border border-[var(--border)] px-2 text-sm hover:bg-[var(--accent-bg)] md:px-4"
               onClick={() => setResolviendo(estado)}
             >
               {ETIQUETA_ESTADO[estado]}

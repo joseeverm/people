@@ -41,7 +41,7 @@ function ContradiccionItem({ contradiccion, senales }: { contradiccion: Contradi
           <button
             type="button"
             aria-expanded={abierta}
-            className="flex min-h-11 items-center underline hover:opacity-100"
+            className="flex toque-11 items-center underline hover:opacity-100"
             onClick={() => setAbierta(v => !v)}
           >
             {abierta ? 'ocultar' : `ver señales en tensión (${contradiccion.senalesEnTension.length})`}

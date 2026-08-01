@@ -151,7 +151,7 @@ export function VistaPerfil() {
   if (persona === null) {
     return (
       <div className="mx-auto flex w-full max-w-xl flex-col gap-4 p-4 sm:p-6">
-        <Link to="/personas" className="flex min-h-11 items-center text-sm opacity-70 hover:opacity-100">
+        <Link to="/personas" className="flex toque-11 items-center text-sm opacity-70 hover:opacity-100">
           ← personas
         </Link>
         <p className="text-sm">No se encontró esta persona.</p>
@@ -160,10 +160,12 @@ export function VistaPerfil() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 p-4 sm:p-6">
+    // Más ancha que el resto: la pestaña "Perfil" se reparte en dos columnas
+    // a partir de lg (afirmaciones | hallazgos y huecos).
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 p-4 sm:p-6 md:max-w-3xl lg:max-w-4xl">
       <Link
         to={`/personas/${persona.id}`}
-        className="flex min-h-11 items-center text-sm opacity-70 hover:opacity-100"
+        className="flex toque-11 items-center text-sm opacity-70 hover:opacity-100"
       >
         ← {persona.nombre}
       </Link>
@@ -207,7 +209,7 @@ export function VistaPerfil() {
             key={id}
             type="button"
             aria-pressed={pestana === id}
-            className={`flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 px-2 text-sm sm:flex-none sm:flex-row sm:gap-1.5 sm:px-4 ${
+            className={`flex toque-12 flex-1 flex-col items-center justify-center gap-0.5 px-2 text-sm sm:flex-none sm:flex-row sm:gap-1.5 sm:px-4 ${
               pestana === id
                 ? 'border-b-2 border-[var(--accent)] font-medium'
                 : 'opacity-60 hover:opacity-100'
@@ -240,7 +242,7 @@ export function VistaPerfil() {
           <div className="flex flex-col items-stretch gap-2 sm:items-start">
             <button
               type="button"
-              className="min-h-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+              className="toque-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
               onClick={regenerar}
               disabled={generando || senales.length === 0 || sinSenalesNuevas}
             >
@@ -256,21 +258,38 @@ export function VistaPerfil() {
 
           {perfil ? (
             <div className="flex flex-col gap-6">
+              {/* El resumen cruza el ancho entero: es el encabezado del perfil. */}
               <p className="rounded-lg border border-[var(--accent-border)] bg-[var(--accent-bg)] p-4 text-sm">
                 {perfil.resumen}
               </p>
 
-              <LeyendaEstatus />
+              {/* En escritorio ancho, dos columnas con una división que ya
+                  existía en el contenido: a la izquierda lo que la persona ES
+                  (afirmaciones por categoría), a la derecha lo que hay que
+                  MIRAR (contradicciones, marco social, huecos por llenar).
+                  `items-start` para que cada columna mida lo suyo y no se
+                  estiren a la altura de la más larga. */}
+              <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-8">
+                <div className="flex flex-col gap-6">
+                  <LeyendaEstatus />
 
-              <SeccionAfirmaciones titulo="Rasgos" afirmaciones={perfil.rasgos} senales={senales} />
-              <SeccionAfirmaciones titulo="Gustos" afirmaciones={perfil.gustos} senales={senales} />
-              <SeccionAfirmaciones titulo="Disgustos" afirmaciones={perfil.disgustos} senales={senales} />
-              <SeccionAfirmaciones titulo="Motivaciones" afirmaciones={perfil.motivaciones} senales={senales} />
-              <SeccionAfirmaciones titulo="Temas sensibles" afirmaciones={perfil.temasSensibles} senales={senales} />
+                  <SeccionAfirmaciones titulo="Rasgos" afirmaciones={perfil.rasgos} senales={senales} />
+                  <SeccionAfirmaciones titulo="Gustos" afirmaciones={perfil.gustos} senales={senales} />
+                  <SeccionAfirmaciones titulo="Disgustos" afirmaciones={perfil.disgustos} senales={senales} />
+                  <SeccionAfirmaciones titulo="Motivaciones" afirmaciones={perfil.motivaciones} senales={senales} />
+                  <SeccionAfirmaciones
+                    titulo="Temas sensibles"
+                    afirmaciones={perfil.temasSensibles}
+                    senales={senales}
+                  />
+                </div>
 
-              <SeccionContradicciones contradicciones={perfil.contradicciones} senales={senales} />
-              <SeccionMarcoSocial porMarcoSocial={perfil.porMarcoSocial} />
-              <SeccionHuecos huecos={perfil.huecos} />
+                <div className="flex flex-col gap-6">
+                  <SeccionContradicciones contradicciones={perfil.contradicciones} senales={senales} />
+                  <SeccionMarcoSocial porMarcoSocial={perfil.porMarcoSocial} />
+                  <SeccionHuecos huecos={perfil.huecos} />
+                </div>
+              </div>
             </div>
           ) : (
             !generando && (

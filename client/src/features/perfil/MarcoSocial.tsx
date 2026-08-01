@@ -22,7 +22,9 @@ export function SeccionMarcoSocial({ porMarcoSocial }: Props) {
     <div className="flex flex-col gap-2">
       <h2 className="text-sm font-medium opacity-80">Marco social</h2>
       <p className="text-xs opacity-60">Cómo cambia según con quién está y en qué situación.</p>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      {/* Vuelve a una columna en lg: ahí la pestaña "Perfil" ya está partida en
+          dos y esta sección vive dentro de media pantalla. */}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
         {entradas.map(([marco, descripcion]) => (
           <div key={marco} className="flex flex-col gap-1 rounded-lg border border-[var(--border)] p-3">
             <span className="text-xs font-medium uppercase tracking-wide opacity-70">{marco}</span>

@@ -43,7 +43,7 @@ export function Captura() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-4 p-4 sm:p-6">
+    <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-4 p-4 sm:p-6 md:max-w-3xl">
       {/* Solo en móvil: empuja la caja y el botón a la mitad inferior de la
           pantalla, donde llega el pulgar sin recolocar la mano. */}
       <div className="flex-1 md:hidden" />
@@ -61,7 +61,7 @@ export function Captura() {
       <div className="flex flex-col-reverse gap-3 md:flex-row md:items-center md:justify-between">
         <button
           type="button"
-          className="min-h-12 w-full rounded-md bg-[var(--accent)] px-5 font-medium text-white disabled:cursor-not-allowed disabled:opacity-40 md:w-auto md:py-2"
+          className="toque-12 w-full rounded-md bg-[var(--accent)] px-5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40 md:w-auto"
           onClick={guardar}
           disabled={!texto.trim() || guardando}
         >
@@ -69,7 +69,7 @@ export function Captura() {
         </button>
         <Link
           to="/bandeja"
-          className="flex min-h-11 items-center justify-center text-sm text-[var(--text)] opacity-70 transition hover:opacity-100 md:min-h-0 md:justify-start"
+          className="flex toque-11 items-center justify-center text-sm text-[var(--text)] opacity-70 transition hover:opacity-100 md:justify-start"
         >
           {sinClasificar > 0
             ? `${sinClasificar} pendiente${sinClasificar === 1 ? '' : 's'} sin clasificar →`

@@ -87,7 +87,7 @@ function SeccionCuenta() {
       )}
       <button
         type="button"
-        className="min-h-12 w-full rounded-md border border-[var(--border)] px-4 text-sm font-medium disabled:opacity-40 sm:w-auto sm:self-start"
+        className="toque-12 w-full rounded-md border border-[var(--border)] px-4 text-sm font-medium disabled:opacity-40 sm:w-auto sm:self-start"
         disabled={saliendo}
         onClick={salir}
       >
@@ -167,7 +167,10 @@ export function Ajustes() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 p-4 sm:p-6">
+    // Una sola columna a propósito: son secciones que se leen y se accionan de
+    // una en una, y a dos columnas los avisos destructivos del import quedarían
+    // fuera del punto donde está mirando el ojo.
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 p-4 sm:p-6 md:max-w-3xl">
       <h1 className="text-lg font-medium">Ajustes</h1>
 
       <SeccionCuenta />
@@ -183,7 +186,7 @@ export function Ajustes() {
         </p>
         <button
           type="button"
-          className="min-h-12 w-full rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:self-start"
+          className="toque-12 w-full rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:self-start"
           disabled={exportando}
           onClick={exportar}
         >
@@ -210,7 +213,7 @@ export function Ajustes() {
         />
         <button
           type="button"
-          className="min-h-12 w-full rounded-md border border-[var(--border)] px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:self-start"
+          className="toque-12 w-full rounded-md border border-[var(--border)] px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:self-start"
           disabled={importando}
           onClick={() => inputArchivo.current?.click()}
         >
@@ -240,7 +243,7 @@ export function Ajustes() {
             <div className="flex flex-col-reverse gap-2 sm:flex-row">
               <button
                 type="button"
-                className="min-h-12 rounded-md bg-red-600 px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="toque-12 rounded-md bg-red-600 px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={importando}
                 onClick={confirmarImport}
               >
@@ -248,7 +251,7 @@ export function Ajustes() {
               </button>
               <button
                 type="button"
-                className="min-h-12 rounded-md border border-[var(--border)] px-4 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                className="toque-12 rounded-md border border-[var(--border)] px-4 text-sm disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={importando}
                 onClick={() => setConfirmacion(null)}
               >

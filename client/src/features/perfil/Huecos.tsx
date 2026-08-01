@@ -38,7 +38,7 @@ function BotonCopiar({ texto, etiqueta }: { texto: string; etiqueta: string }) {
     <button
       type="button"
       onClick={copiar}
-      className="min-h-11 shrink-0 rounded border border-[var(--border)] px-3 text-xs opacity-70 hover:opacity-100"
+      className="toque-11 shrink-0 rounded border border-[var(--border)] px-3 text-xs opacity-70 hover:opacity-100"
       aria-label={`Copiar ${etiqueta}`}
     >
       {copiado ? 'copiado ✓' : 'copiar'}

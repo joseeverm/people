@@ -15,7 +15,8 @@ const TIPOS: { valor: TipoPrediccion; etiqueta: string }[] = [
   { valor: 'inferida', etiqueta: 'síntesis (inferida, no calibra)' },
 ];
 
-/** Chip tocable de 44px: reemplaza a los <select> nativos, incómodos en móvil. */
+/** Chip tocable: 44px en móvil, 32px en escritorio (`toque-11`, ver index.css).
+ *  Reemplaza a los <select> nativos, incómodos en móvil. */
 function Chip({
   activo,
   onClick,
@@ -30,7 +31,7 @@ function Chip({
       type="button"
       aria-pressed={activo}
       onClick={onClick}
-      className={`min-h-11 rounded-full border px-3 text-sm transition ${
+      className={`toque-11 rounded-full border px-3 text-sm transition ${
         activo
           ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
           : 'border-[var(--border)] bg-[var(--bg)] opacity-70 hover:opacity-100'
@@ -92,7 +93,7 @@ export function NuevaPrediccion({ personaId, onCreada }: Props) {
     return (
       <button
         type="button"
-        className="min-h-12 w-full rounded-md border border-[var(--border)] px-3 text-sm hover:bg-[var(--accent-bg)] sm:w-auto sm:self-start"
+        className="toque-12 w-full rounded-md border border-[var(--border)] px-3 text-sm hover:bg-[var(--accent-bg)] sm:w-auto sm:self-start"
         onClick={() => setAbierto(true)}
       >
         + predicción propia
@@ -103,7 +104,7 @@ export function NuevaPrediccion({ personaId, onCreada }: Props) {
   return (
     <div className="flex flex-col gap-4 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-bg)] p-4">
       <textarea
-        className="min-h-24 w-full resize-none rounded border border-[var(--border)] bg-transparent p-3 text-base"
+        className="min-h-24 w-full resize-none rounded border border-[var(--border)] bg-transparent p-3 text-base md:text-sm"
         value={texto}
         onChange={e => setTexto(e.target.value)}
         autoFocus
@@ -147,13 +148,13 @@ export function NuevaPrediccion({ personaId, onCreada }: Props) {
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
-          className="min-h-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:opacity-40"
+          className="toque-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:opacity-40"
           onClick={guardar}
           disabled={guardando || !texto.trim()}
         >
           {guardando ? 'guardando…' : 'guardar'}
         </button>
-        <button type="button" className="min-h-12 px-4 text-sm opacity-60 hover:opacity-100" onClick={cerrar}>
+        <button type="button" className="toque-12 px-4 text-sm opacity-60 hover:opacity-100" onClick={cerrar}>
           cancelar
         </button>
       </div>

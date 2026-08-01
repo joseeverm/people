@@ -43,8 +43,9 @@ function humanizar(slug: string): string {
   return slug.replace(/_/g, ' ');
 }
 
-/** Botón-chip tocable. min-h-11 = 44px en móvil (raíz 16px): el mínimo cómodo
- *  para el pulgar. Sustituye a los <select> nativos, incómodos en el celular. */
+/** Botón-chip tocable. `toque-11` mide 44px en móvil (el mínimo cómodo para el
+ *  pulgar) y 32px en escritorio, donde 44px se ven enormes; ver index.css.
+ *  Sustituye a los <select> nativos, incómodos en el celular. */
 function Chip({
   activo,
   onClick,
@@ -59,7 +60,7 @@ function Chip({
       type="button"
       aria-pressed={activo}
       onClick={onClick}
-      className={`min-h-11 rounded-full border px-3 text-sm transition ${
+      className={`toque-11 rounded-full border px-3 text-sm transition ${
         activo
           ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
           : 'border-[var(--border)] opacity-70 hover:opacity-100'
@@ -148,7 +149,7 @@ function SelectorMultiple({
       </div>
       <div className="flex items-center gap-2">
         <input
-          className="min-h-11 flex-1 rounded border border-[var(--border)] bg-transparent px-3 text-sm"
+          className="toque-11 flex-1 rounded border border-[var(--border)] bg-transparent px-3 text-sm"
           value={nuevo}
           onChange={e => setNuevo(e.target.value)}
           onKeyDown={e => {
@@ -161,7 +162,7 @@ function SelectorMultiple({
         />
         <button
           type="button"
-          className="size-11 shrink-0 rounded border border-[var(--border)] text-lg"
+          className="toque-caja shrink-0 rounded border border-[var(--border)] text-lg"
           aria-label={`Agregar a ${etiqueta}`}
           onClick={agregarNuevo}
         >
@@ -221,46 +222,55 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
   }
 
   return (
-    <div className="flex flex-col gap-5 rounded-lg border border-[var(--border)] p-4">
-      <textarea
-        className="min-h-24 w-full resize-none rounded border border-[var(--border)] bg-transparent p-3 text-base"
-        value={contenido}
-        onChange={e => setContenido(e.target.value)}
-      />
+    /* Móvil y tablet: una columna, se recorre de arriba abajo. A partir de lg
+       la tarjeta se parte en dos — a la izquierda lo que describe la nota
+       (texto, tipo, con quién, en qué situación) y a la derecha las etiquetas —
+       porque en una sola columna ancha la tarjeta mide varias pantallas de alto
+       y obliga a bajar hasta el fondo para confirmar. */
+    <div className="flex flex-col gap-5 rounded-lg border border-[var(--border)] p-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6">
+      <div className="flex flex-col gap-5">
+        <textarea
+          className="min-h-24 w-full resize-none rounded border border-[var(--border)] bg-transparent p-3 text-base md:text-sm"
+          value={contenido}
+          onChange={e => setContenido(e.target.value)}
+        />
 
-      <span className="text-left text-xs opacity-70">{personasDeLaNota.map(p => p.nombre).join(', ')}</span>
+        <span className="text-left text-xs opacity-70">{personasDeLaNota.map(p => p.nombre).join(', ')}</span>
 
-      {pistasAclaracion.length > 0 && (
-        <p className="text-xs text-amber-600">El clasificador pide revisar: {pistasAclaracion.join(', ')}.</p>
-      )}
+        {pistasAclaracion.length > 0 && (
+          <p className="text-xs text-amber-600">El clasificador pide revisar: {pistasAclaracion.join(', ')}.</p>
+        )}
 
-      <div className="flex flex-col gap-2">
-        <span className="text-xs opacity-70">Tipo</span>
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(NOMBRE_TIPO).map(([valor, nombre]) => (
-            <Chip key={valor} activo={tipo === valor} onClick={() => setTipo(valor as TipoSenal)}>
-              {nombre}
-            </Chip>
-          ))}
+        <div className="flex flex-col gap-2">
+          <span className="text-xs opacity-70">Tipo</span>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(NOMBRE_TIPO).map(([valor, nombre]) => (
+              <Chip key={valor} activo={tipo === valor} onClick={() => setTipo(valor as TipoSenal)}>
+                {nombre}
+              </Chip>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Apilados en móvil: dos columnas de chips en 375px son ilegibles. */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <SelectorMultiple
-          etiqueta="¿Con quién?"
-          seleccionados={compania}
-          sugeridos={COMPANIA_SUGERIDA}
-          usados={companiaUsada}
-          onCambiar={setCompania}
-        />
-        <SelectorMultiple
-          etiqueta="¿En qué situación?"
-          seleccionados={situacion}
-          sugeridos={SITUACION_SUGERIDA}
-          usados={situacionUsada}
-          onCambiar={setSituacion}
-        />
+        {/* Apilados en móvil: dos columnas de chips en 375px son ilegibles.
+            En lg vuelven a apilarse: ahí la tarjeta ya está partida en dos y
+            estos selectores viven dentro de media tarjeta. */}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-1">
+          <SelectorMultiple
+            etiqueta="¿Con quién?"
+            seleccionados={compania}
+            sugeridos={COMPANIA_SUGERIDA}
+            usados={companiaUsada}
+            onCambiar={setCompania}
+          />
+          <SelectorMultiple
+            etiqueta="¿En qué situación?"
+            seleccionados={situacion}
+            sugeridos={SITUACION_SUGERIDA}
+            usados={situacionUsada}
+            onCambiar={setSituacion}
+          />
+        </div>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -277,7 +287,7 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
               <span className="text-sm capitalize">{humanizar(e.dominio)}</span>
               <button
                 type="button"
-                className="flex size-11 shrink-0 items-center justify-center rounded-full text-lg opacity-60 hover:opacity-100"
+                className="flex toque-caja shrink-0 items-center justify-center rounded-full text-lg opacity-60 hover:opacity-100"
                 aria-label={`Quitar ${humanizar(e.dominio)}`}
                 onClick={() => quitarEtiqueta(i)}
               >
@@ -312,7 +322,7 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
           </div>
           <button
             type="button"
-            className="min-h-11 rounded-md border border-[var(--border)] px-3 text-sm"
+            className="toque-11 rounded-md border border-[var(--border)] px-3 text-sm"
             onClick={agregarEtiqueta}
           >
             + etiqueta
@@ -320,11 +330,12 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {/* Error y confirmación cruzan las dos columnas: cierran la tarjeta. */}
+      {error && <p className="text-sm text-red-500 lg:col-span-2">{error}</p>}
 
       <button
         type="button"
-        className="min-h-12 w-full rounded-md bg-[var(--accent)] px-4 text-base font-medium text-white"
+        className="toque-12 w-full rounded-md bg-[var(--accent)] px-4 text-base font-medium text-white md:text-sm lg:col-span-2"
         onClick={confirmar}
       >
         Confirmar

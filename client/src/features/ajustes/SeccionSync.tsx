@@ -118,7 +118,7 @@ export function SeccionSync() {
       <div className="flex flex-col gap-2 sm:flex-row">
         <button
           type="button"
-          className="min-h-12 rounded-md border border-[var(--border)] px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+          className="toque-12 rounded-md border border-[var(--border)] px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
           disabled={corriendo}
           onClick={ahora}
         >
@@ -126,7 +126,7 @@ export function SeccionSync() {
         </button>
         <button
           type="button"
-          className="min-h-12 rounded-md border border-[var(--border)] px-4 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+          className="toque-12 rounded-md border border-[var(--border)] px-4 text-sm disabled:cursor-not-allowed disabled:opacity-40"
           disabled={corriendo}
           onClick={subirTodo}
         >

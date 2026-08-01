@@ -130,15 +130,17 @@ export function Bandeja() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 p-4 sm:p-6">
+    // Más ancha que el resto: la tarjeta de propuesta se reparte en dos
+    // columnas a partir de lg y necesita el sitio (ver TarjetaPropuesta).
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 p-4 sm:p-6 md:max-w-3xl lg:max-w-4xl">
       <div className="flex items-center justify-between gap-3">
-        <Link to="/" className="flex min-h-11 items-center text-sm opacity-70 hover:opacity-100">
+        <Link to="/" className="flex toque-11 items-center text-sm opacity-70 hover:opacity-100">
           ← captura
         </Link>
         {listasParaClasificar.length > 0 && (
           <button
             type="button"
-            className="min-h-11 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="toque-11 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
             onClick={clasificarPendientes}
             disabled={progreso !== null}
           >

@@ -23,7 +23,10 @@
   --safe-abajo: env(safe-area-inset-bottom, 0px);
   --espacio-nav-inferior: calc(var(--nav-inferior) + var(--safe-abajo) + 1rem);
 
-  font: 18px/145% var(--sans);
+  /* 16px en TODAS las anchuras. Antes eran 18px por encima de 1024px, con lo
+     que el escritorio salía más grande que el móvil: al ser la raíz de los
+     rem, inflaba también cada padding, gap y alto de control de Tailwind. */
+  font: 16px/145% var(--sans);
   letter-spacing: 0.18px;
   color-scheme: light dark;
   color: var(--text);
@@ -32,10 +35,6 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -113,4 +112,55 @@ code {
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Objetivos táctiles: grandes SOLO en móvil.
+
+   44px es el mínimo cómodo para el pulgar, pero con ratón un botón de 44px
+   se ve desproporcionado y estira toda la interfaz. Estas utilidades llevan
+   el alto táctil por debajo de 768px y vuelven a proporciones de escritorio
+   a partir de ahí — el mismo corte que usa el nav (barra abajo en móvil,
+   arriba en escritorio) y que el `md:` de Tailwind.
+
+   Existen para que la regla se escriba UNA vez: sustituyen a los altos fijos
+   (`min-h-11`, `min-h-12`, `min-h-14`, `size-11`) que antes se repetían
+   control a control y aplicaban el tamaño táctil en las dos anchuras. Un
+   control nuevo usa estas, no un alto a pelo. (En media queries `rem` siempre
+   son 16px, así que estos
+   768px coinciden con el breakpoint md: pase lo que pase con la raíz.)
+   ───────────────────────────────────────────────────────────────────────── */
+
+/** Chips, enlaces, inputs y botones secundarios: 44px → 32px. */
+@utility toque-11 {
+  min-height: 2.75rem;
+  @media (min-width: 48rem) {
+    min-height: 2rem;
+  }
+}
+
+/** Botones principales y pestañas: 48px → 36px. */
+@utility toque-12 {
+  min-height: 3rem;
+  @media (min-width: 48rem) {
+    min-height: 2.25rem;
+  }
+}
+
+/** Filas expandibles con dos líneas de texto: 56px → 40px. */
+@utility toque-14 {
+  min-height: 3.5rem;
+  @media (min-width: 48rem) {
+    min-height: 2.5rem;
+  }
+}
+
+/** Cuadrado (botones de un solo glifo: «+», «×»): 44px → 32px de lado. */
+@utility toque-caja {
+  width: 2.75rem;
+  height: 2.75rem;
+  @media (min-width: 48rem) {
+    width: 2rem;
+    height: 2rem;
+  }
 }

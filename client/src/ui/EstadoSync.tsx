@@ -55,7 +55,7 @@ export function EstadoSync({ pendientes, subiendo, progreso, error, onReintentar
       title={error ?? undefined}
       className={`relative block w-full border-t px-4 py-1.5 text-center text-xs ${
         error
-          ? 'border-red-500/30 bg-red-500/10 text-red-500'
+          ? 'border-[var(--error-borde)] bg-[var(--error-bg)] text-[var(--error)]'
           : 'border-[var(--border)] bg-[var(--social-bg)] opacity-70'
       }`}
     >

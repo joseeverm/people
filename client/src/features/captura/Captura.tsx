@@ -112,12 +112,12 @@ export function Captura() {
       />
 
       {error && (
-        <p className="rounded-lg border border-red-500/40 bg-red-500/5 p-3 text-sm text-red-500">
+        <p className="rounded-lg border border-[var(--error-borde)] bg-[var(--error-bg)] p-3 text-sm text-[var(--error)]">
           {error}
         </p>
       )}
       {tarda && !error && (
-        <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-600">
+        <p className="rounded-lg border border-[var(--aviso-borde)] bg-[var(--aviso-bg)] p-3 text-sm text-[var(--aviso)]">
           Está tardando más de lo normal. Si tienes la app abierta en otra pestaña, ciérrala y
           recarga: puede estar bloqueando la base local.
         </p>

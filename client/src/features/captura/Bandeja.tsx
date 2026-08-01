@@ -152,7 +152,7 @@ export function Bandeja() {
       </div>
 
       {errores.length > 0 && (
-        <div className="flex flex-col gap-1 rounded-lg border border-red-500/40 bg-red-500/5 p-3 text-left text-sm text-red-500">
+        <div className="flex flex-col gap-1 rounded-lg border border-[var(--error-borde)] bg-[var(--error-bg)] p-3 text-left text-sm text-[var(--error)]">
           {errores.map((mensaje, i) => (
             <p key={i} className="whitespace-pre-wrap">
               {mensaje}

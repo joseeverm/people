@@ -18,6 +18,77 @@
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     PALETA SEMÁNTICA — los datos NO se pintan de morado
+     ═══════════════════════════════════════════════════════════════════════
+     Regla base: el acento (morado) codifica INTERACCIÓN y solo eso — botones,
+     chip aplicado, pestaña activa, nav activo, foco. Si el morado señalara
+     además un dato, dejaría de querer decir "esto responde al toque".
+
+     Cada eje semántico de abajo tiene su propia familia, y NINGUNO se apoya
+     solo en el color: todos van acompañados de forma, icono o texto (ver
+     ui/semantica.ts, que es donde se traducen a clases). Los tonos son
+     distintos por tema porque sobre blanco hay que oscurecer y sobre el fondo
+     oscuro hay que aclarar para conservar el contraste.
+
+     1. CERTEZA (hecho/inferencia/especulación) — gradiente, no categorías.
+        Deliberadamente SIN tinte propio: es una escala de firmeza, y la
+        distinguen el icono (●/◐/○) y el trazo (sólido/sólido/punteado). Meterle
+        un color más a una app que ya maneja cinco ejes sería ruido. */
+  --certeza-alta: #08060d;
+  --certeza-media: #6b6375;
+  --certeza-baja: #9d97a6;
+
+  /* 2. CAPAS (periférica → intermedia → central) — un solo tono, intensidad
+        creciente, porque están ORDENADAS. Verde azulado: no lo usa ningún
+        otro eje y no se confunde con el verde de "acertada" (más amarillo). */
+  --capa-1: #4d9c8f;
+  --capa-2: #1f7d6e;
+  --capa-3: #0d5348;
+  --capa-1-bg: rgba(77, 156, 143, 0.10);
+  --capa-2-bg: rgba(31, 125, 110, 0.16);
+  --capa-3-bg: rgba(13, 83, 72, 0.22);
+
+  /* 3. PREDICCIONES — verde / ámbar / rojo, el único eje donde la convención
+        cultural pesa más que la coherencia interna de la paleta. */
+  --pred-acierto: #15803d;
+  --pred-acierto-bg: rgba(21, 128, 61, 0.10);
+  --pred-acierto-borde: rgba(21, 128, 61, 0.40);
+  --pred-parcial: #b45309;
+  --pred-parcial-bg: rgba(180, 83, 9, 0.10);
+  --pred-parcial-borde: rgba(180, 83, 9, 0.40);
+  --pred-fallo: #b91c1c;
+  --pred-fallo-bg: rgba(185, 28, 28, 0.10);
+  --pred-fallo-borde: rgba(185, 28, 28, 0.40);
+
+  /* 4. CONTRADICCIONES — acento propio, el hallazgo más valioso del sistema.
+        Rosa y no rojo: el rojo ya es "predicción fallida" y una contradicción
+        no es un fallo. Además lleva ⚡ y una barra lateral gruesa, que es lo
+        que de verdad la hace saltar en una lista de secciones. */
+  --contradiccion: #be185d;
+  --contradiccion-bg: rgba(190, 24, 93, 0.08);
+  --contradiccion-borde: rgba(190, 24, 93, 0.45);
+
+  /* 6. FEEDBACK DEL SISTEMA — error y aviso. NO es un eje de datos: dice cómo
+        le fue a una operación. Va aparte por eso, y aquí para que no queden
+        `text-red-500` sueltos por trece componentes. */
+  --error: #b91c1c;
+  --error-bg: rgba(185, 28, 28, 0.06);
+  --error-borde: rgba(185, 28, 28, 0.40);
+  --aviso: #b45309;
+  --aviso-bg: rgba(180, 83, 9, 0.06);
+  --aviso-borde: rgba(180, 83, 9, 0.35);
+
+  /* 5. FAMILIAS DE DOMINIO — nueve tonos serían ruido, así que van en tres
+        grupos. Apagados a propósito: son etiquetas de contexto, no el dato
+        principal, y siempre aparecen junto al nombre del dominio. */
+  --fam-superficie: #8a6a2a;
+  --fam-superficie-bg: rgba(138, 106, 42, 0.10);
+  --fam-estructura: #2b5a85;
+  --fam-estructura-bg: rgba(43, 90, 133, 0.10);
+  --fam-profundidad: #4a417f;
+  --fam-profundidad-bg: rgba(74, 65, 127, 0.10);
+
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
@@ -56,6 +127,48 @@
     --social-bg: rgba(47, 48, 58, 0.5);
     --shadow:
       rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+
+    /* Los mismos ejes, aclarados para el fondo oscuro. Los tonos del tema
+       claro aquí darían 2:1 o menos y serían ilegibles. */
+    --certeza-alta: #f3f4f6;
+    --certeza-media: #9ca3af;
+    --certeza-baja: #6f7581;
+
+    /* En oscuro la intensidad crece hacia el BRILLO, no hacia lo oscuro. */
+    --capa-1: #4f9e91;
+    --capa-2: #63c9b4;
+    --capa-3: #7fefda;
+    --capa-1-bg: rgba(79, 158, 145, 0.10);
+    --capa-2-bg: rgba(99, 201, 180, 0.14);
+    --capa-3-bg: rgba(127, 239, 218, 0.18);
+
+    --pred-acierto: #4ade80;
+    --pred-acierto-bg: rgba(74, 222, 128, 0.12);
+    --pred-acierto-borde: rgba(74, 222, 128, 0.40);
+    --pred-parcial: #fbbf24;
+    --pred-parcial-bg: rgba(251, 191, 36, 0.12);
+    --pred-parcial-borde: rgba(251, 191, 36, 0.40);
+    --pred-fallo: #f87171;
+    --pred-fallo-bg: rgba(248, 113, 113, 0.12);
+    --pred-fallo-borde: rgba(248, 113, 113, 0.40);
+
+    --contradiccion: #f472b6;
+    --contradiccion-bg: rgba(244, 114, 182, 0.10);
+    --contradiccion-borde: rgba(244, 114, 182, 0.45);
+
+    --error: #f87171;
+    --error-bg: rgba(248, 113, 113, 0.08);
+    --error-borde: rgba(248, 113, 113, 0.40);
+    --aviso: #fbbf24;
+    --aviso-bg: rgba(251, 191, 36, 0.08);
+    --aviso-borde: rgba(251, 191, 36, 0.35);
+
+    --fam-superficie: #d9b98a;
+    --fam-superficie-bg: rgba(217, 185, 138, 0.10);
+    --fam-estructura: #8ab4d9;
+    --fam-estructura-bg: rgba(138, 180, 217, 0.10);
+    --fam-profundidad: #a5a0e0;
+    --fam-profundidad-bg: rgba(165, 160, 224, 0.10);
   }
 
 }

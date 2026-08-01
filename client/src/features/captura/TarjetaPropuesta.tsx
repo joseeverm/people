@@ -10,6 +10,7 @@ import type { Capa, CapturaPendiente, Dominio, EtiquetaDominio, Senal, TipoSenal
 import { CAPAS, COMPANIA_SUGERIDA, DOMINIOS, SITUACION_SUGERIDA } from '../../core/esquema';
 import type { ConfirmacionUsuario, EntradaClasificacion, PropuestaSenal } from '../../core/clasificador';
 import { materializarSenal } from '../../core/clasificador';
+import { capaChip, capaMarcas, familiaChip, NOMBRE_CAPA } from '../../ui/semantica';
 
 /** minúsculas + sin tildes + sin espacios sobrantes, para comparar sin crear duplicados.
  *  Defensivo: si el valor no es un string (undefined en datos legados, número suelto…),
@@ -190,6 +191,46 @@ const PISTA_ACLARACION: Record<PropuestaSenal['aclaraciones'][number]['tipo'], s
   revisar_etiquetas: 'etiquetas',
 };
 
+/**
+ * Una DECISIÓN de la clasificación: tipo, con quién, en qué situación,
+ * etiquetas. Cada una es un bloque cerrado —número, título, descripción corta,
+ * fondo y borde propios— en vez de otro apartado de un formulario continuo.
+ *
+ * Existe porque las cuatro se leían como una sola pared de chips: al recorrer
+ * la tarjeta no había forma de ver dónde terminaba una decisión y empezaba la
+ * siguiente. El número y el título son lo que permite saltar directamente a la
+ * que interesa revisar cuando el clasificador pide confirmar solo una.
+ */
+function Bloque({
+  n,
+  titulo,
+  descripcion,
+  children,
+}: {
+  n: number;
+  titulo: string;
+  descripcion: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--social-bg)] p-4">
+      <div className="flex items-baseline gap-2">
+        <span
+          aria-hidden
+          className="flex size-5 shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--bg)] text-[11px] font-medium tabular-nums opacity-70"
+        >
+          {n}
+        </span>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <h3 className="text-sm font-medium text-[var(--certeza-alta)]">{titulo}</h3>
+          <p className="text-xs opacity-55">{descripcion}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 interface Props {
   captura: CapturaPendiente;
   entrada: EntradaClasificacion;
@@ -242,8 +283,6 @@ function SelectorMultiple({
 
   return (
     <div className="flex flex-col gap-3">
-      <span className="text-xs font-medium opacity-70">{etiqueta}</span>
-
       {/* ---- Zona 1: lo que ya forma parte de la señal ---- */}
       <div className="flex flex-col gap-1.5">
         <RotuloZona>En esta señal</RotuloZona>
@@ -361,8 +400,8 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
        (texto, tipo, con quién, en qué situación) y a la derecha las etiquetas —
        porque en una sola columna ancha la tarjeta mide varias pantallas de alto
        y obliga a bajar hasta el fondo para confirmar. */
-    <div className="flex flex-col gap-5 rounded-lg border border-[var(--border)] p-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6">
-      <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6 rounded-lg border border-[var(--border)] p-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6">
+      <div className="flex flex-col gap-6">
         <textarea
           className="min-h-24 w-full resize-none rounded border border-[var(--border)] bg-transparent p-3 text-base md:text-sm"
           value={contenido}
@@ -372,14 +411,13 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
         <span className="text-left text-xs opacity-70">{personasDeLaNota.map(p => p.nombre).join(', ')}</span>
 
         {pistasAclaracion.length > 0 && (
-          <p className="text-xs text-amber-600">El clasificador pide revisar: {pistasAclaracion.join(', ')}.</p>
+          <p className="text-xs text-[var(--aviso)]">El clasificador pide revisar: {pistasAclaracion.join(', ')}.</p>
         )}
 
         {/* El tipo es selección única y SIEMPRE hay uno aplicado: relleno de
             acento para el vigente, contorno apagado para el resto. No lleva ×
             porque no se puede quitar, solo cambiar por otro. */}
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-medium opacity-70">Tipo</span>
+        <Bloque n={1} titulo="Tipo de señal" descripcion="Qué clase de observación es. Pesa en el perfil.">
           <div className="flex flex-wrap gap-2">
             {Object.entries(NOMBRE_TIPO).map(([valor, nombre]) => (
               <ChipSeleccionUnica
@@ -391,32 +429,38 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
               </ChipSeleccionUnica>
             ))}
           </div>
-        </div>
+        </Bloque>
 
         {/* Apilados en móvil: dos columnas de chips en 375px son ilegibles.
             En lg vuelven a apilarse: ahí la tarjeta ya está partida en dos y
             estos selectores viven dentro de media tarjeta. */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-1">
-          <SelectorMultiple
-            etiqueta="¿Con quién?"
-            seleccionados={compania}
-            sugeridos={COMPANIA_SUGERIDA}
-            usados={companiaUsada}
-            onCambiar={setCompania}
-          />
-          <SelectorMultiple
-            etiqueta="¿En qué situación?"
-            seleccionados={situacion}
-            sugeridos={SITUACION_SUGERIDA}
-            usados={situacionUsada}
-            onCambiar={setSituacion}
-          />
+          <Bloque n={2} titulo="¿Con quién?" descripcion="Ante quién ocurrió. Puede quedar vacío.">
+            <SelectorMultiple
+              etiqueta="¿Con quién?"
+              seleccionados={compania}
+              sugeridos={COMPANIA_SUGERIDA}
+              usados={companiaUsada}
+              onCambiar={setCompania}
+            />
+          </Bloque>
+          <Bloque n={3} titulo="¿En qué situación?" descripcion="Bajo qué marco. También puede quedar vacío.">
+            <SelectorMultiple
+              etiqueta="¿En qué situación?"
+              seleccionados={situacion}
+              sugeridos={SITUACION_SUGERIDA}
+              usados={situacionUsada}
+              onCambiar={setSituacion}
+            />
+          </Bloque>
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <span className="text-xs font-medium opacity-70">Etiquetas</span>
-
+      <Bloque
+        n={4}
+        titulo="Etiquetas"
+        descripcion="Qué dominios toca y a qué profundidad. Es lo que mueve el nivel."
+      >
         {/* ---- Zona 1: las etiquetas que ya lleva la señal ---- */}
         <div className="flex flex-col gap-2">
           <RotuloZona>En esta señal</RotuloZona>
@@ -433,7 +477,16 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
                 className="flex flex-col gap-2 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-bg)] p-3"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium capitalize">{humanizar(e.dominio)}</span>
+                  {/* El dominio se tiñe por FAMILIA y la capa lleva su marca en
+                      la rampa de profundidad: son datos, y se leen en la misma
+                      paleta que la vista de señales y el radar. Los chips de
+                      abajo siguen en morado porque ahí sí son un control. */}
+                  <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <span {...familiaChip(e.dominio)}>{humanizar(e.dominio)}</span>
+                    <span {...capaChip(e.capa)}>
+                      <span aria-hidden>{capaMarcas(e.capa)}</span> {NOMBRE_CAPA[e.capa]}
+                    </span>
+                  </span>
                   <button
                     type="button"
                     className="flex toque-caja shrink-0 items-center justify-center rounded-full text-lg opacity-60 hover:bg-[var(--bg)] hover:opacity-100"
@@ -502,10 +555,10 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
             </span>
           )}
         </div>
-      </div>
+      </Bloque>
 
       {/* Error y confirmación cruzan las dos columnas: cierran la tarjeta. */}
-      {error && <p className="text-sm text-red-500 lg:col-span-2">{error}</p>}
+      {error && <p className="text-sm text-[var(--error)] lg:col-span-2">{error}</p>}
 
       <button
         type="button"

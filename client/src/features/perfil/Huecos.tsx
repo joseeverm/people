@@ -7,17 +7,12 @@
  */
 import { useState } from 'react';
 import type { Capa, Dominio, HuecoInfo } from '../../core/esquema';
+import { capaChip, familiaChip, familiaDe, NOMBRE_CAPA } from '../../ui/semantica';
 
 /** 'valores_creencias' → 'valores creencias' para lectura humana. */
 function humanizar(slug: string): string {
   return slug.replace(/_/g, ' ');
 }
-
-const NOMBRE_CAPA: Record<Capa, string> = {
-  periferica: 'periférica',
-  intermedia: 'intermedia',
-  central: 'central',
-};
 
 /** Botón de copiar con feedback breve ("copiado ✓") tras el clic. */
 function BotonCopiar({ texto, etiqueta }: { texto: string; etiqueta: string }) {
@@ -48,12 +43,17 @@ function BotonCopiar({ texto, etiqueta }: { texto: string; etiqueta: string }) {
 
 function HuecoItem({ hueco }: { hueco: HuecoInfo }) {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-bg)] p-4">
+    // Sin acento: un hueco es un dato del perfil. Lo que lo destaca es el
+    // fondo tenue y los chips de familia/capa, no el color de interacción.
+    <div className="flex flex-col gap-3 rounded-lg border border-[var(--border)] bg-[var(--social-bg)] p-4">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="text-sm font-medium capitalize">{humanizar(hueco.dominio as Dominio)}</span>
-        <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-xs opacity-70">
-          capa {NOMBRE_CAPA[hueco.capaObjetivo]}
+        {/* Dominio teñido por FAMILIA (tres grupos, no nueve tonos) y capa
+            objetivo en la rampa de profundidad. */}
+        <span className="text-sm font-medium first-letter:uppercase">
+          {humanizar(hueco.dominio as Dominio)}
         </span>
+        <span {...familiaChip(hueco.dominio as Dominio)}>{familiaDe(hueco.dominio as Dominio)}</span>
+        <span {...capaChip(hueco.capaObjetivo as Capa)}>capa {NOMBRE_CAPA[hueco.capaObjetivo]}</span>
       </div>
 
       <p className="text-sm opacity-80">{hueco.razon}</p>

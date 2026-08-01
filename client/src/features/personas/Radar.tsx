@@ -12,6 +12,7 @@
  * como a 500 — si no, la miniatura saldría con líneas de cuarto de pixel.
  */
 import type { Capa, Dominio } from '../../core/esquema';
+import { capaColor, capaColorPorNivel } from '../../ui/semantica';
 
 const INTENSIDAD_MAX = 3; // CAPA_VALOR.central
 
@@ -54,9 +55,9 @@ const ANILLOS: {
   opacidad: number;
   grosor: number;
 }[] = [
-  { valor: 1, capa: 'periferica', nombre: 'periférica', guion: '2 6', opacidad: 0.35, grosor: 1 },
-  { valor: 2, capa: 'intermedia', nombre: 'intermedia', guion: '9 5', opacidad: 0.45, grosor: 1 },
-  { valor: 3, capa: 'central', nombre: 'central', opacidad: 0.6, grosor: 1.25 },
+  { valor: 1, capa: 'periferica', nombre: 'periférica', guion: '2 6', opacidad: 0.75, grosor: 1 },
+  { valor: 2, capa: 'intermedia', nombre: 'intermedia', guion: '9 5', opacidad: 0.85, grosor: 1 },
+  { valor: 3, capa: 'central', nombre: 'central', opacidad: 1, grosor: 1.5 },
 ];
 
 /** 'miedos_inseguridades' → ['miedos', 'inseguridades'] (una palabra por línea:
@@ -122,7 +123,7 @@ export function Radar({ datos, size, etiquetas = false }: Props) {
           key={anillo.valor}
           points={datos.map((_, i) => punto(i, anillo.valor).join(',')).join(' ')}
           fill="none"
-          stroke="var(--text)"
+          stroke={capaColor(anillo.capa)}
           strokeWidth={anillo.grosor}
           strokeDasharray={anillo.guion}
           opacity={anillo.opacidad}
@@ -130,10 +131,13 @@ export function Radar({ datos, size, etiquetas = false }: Props) {
         />
       ))}
 
+      {/* El polígono es DATO, así que no lleva acento: el morado está
+          reservado a la interacción. Va en el tono de las capas, que es el eje
+          que este gráfico mide. */}
       <polygon
         points={poligono}
-        fill="var(--accent-bg)"
-        stroke="var(--accent)"
+        fill="var(--capa-1-bg)"
+        stroke={capaColor('intermedia')}
         strokeWidth={1.5}
         vectorEffect="non-scaling-stroke"
       />
@@ -145,7 +149,17 @@ export function Radar({ datos, size, etiquetas = false }: Props) {
         datos.map((d, i) => {
           if (d.intensidad <= 0) return null;
           const [x, y] = punto(i, d.intensidad);
-          return <circle key={`p-${d.dominio}`} cx={x} cy={y} r={3.5} fill="var(--accent)" />;
+          // Cada vértice con el color de la capa a la que llega ese dominio:
+          // el punto dice la profundidad sin tener que contar anillos.
+          return (
+            <circle
+              key={`p-${d.dominio}`}
+              cx={x}
+              cy={y}
+              r={3.5}
+              fill={capaColorPorNivel(d.intensidad)}
+            />
+          );
         })}
 
       {etiquetas &&
@@ -202,10 +216,10 @@ export function LeyendaRadar() {
                 y1={4}
                 x2={20}
                 y2={4}
-                stroke="var(--text)"
+                stroke={capaColor(anillo.capa)}
                 strokeWidth={anillo.grosor * 1.6}
                 strokeDasharray={anillo.guion}
-                opacity={anillo.opacidad + 0.25}
+                opacity={anillo.opacidad}
               />
             </svg>
             {anillo.nombre}

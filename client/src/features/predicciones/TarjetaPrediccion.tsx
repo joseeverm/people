@@ -11,6 +11,7 @@ import type { Confianza, Prediccion, Senal } from '../../core/esquema';
 import { repo } from '../../data/dexie-repo';
 import { ListaEvidencia } from '../perfil/Afirmaciones';
 import { ETIQUETA_ESTADO, ETIQUETA_TIPO, resolverPrediccion, type EstadoResolucion } from './resolver';
+import { PREDICCION } from '../../ui/semantica';
 
 const CONFIANZA_ETIQUETA: Record<Confianza, string> = {
   baja: 'confianza baja',
@@ -18,23 +19,6 @@ const CONFIANZA_ETIQUETA: Record<Confianza, string> = {
   alta: 'confianza alta',
 };
 
-const ESTADO_INFO: Record<EstadoResolucion, { etiqueta: string; clasesCard: string; clasesBadge: string }> = {
-  acertada: {
-    etiqueta: 'acertó',
-    clasesCard: 'border-emerald-500/40 bg-emerald-500/5',
-    clasesBadge: 'bg-emerald-500/15 text-emerald-600',
-  },
-  parcial: {
-    etiqueta: 'parcial',
-    clasesCard: 'border-amber-500/40 bg-amber-500/5',
-    clasesBadge: 'bg-amber-500/15 text-amber-600',
-  },
-  fallida: {
-    etiqueta: 'falló',
-    clasesCard: 'border-red-500/40 bg-red-500/5',
-    clasesBadge: 'bg-red-500/15 text-red-600',
-  },
-};
 
 function humanizar(slug: string): string {
   return slug.replace(/_/g, ' ');
@@ -71,14 +55,17 @@ export function TarjetaPrediccion({ prediccion, senales, onResuelta, nombrePerso
         </div>
       );
     }
-    const info = ESTADO_INFO[prediccion.estado];
+    const info = PREDICCION[prediccion.estado];
     const verificacion = prediccion.resueltaPor
       ? senales.find(s => s.id === prediccion.resueltaPor)
       : undefined;
     return (
-      <div className={`flex flex-col gap-2 rounded-lg border p-3 ${info.clasesCard}`}>
+      <div className={`flex flex-col gap-2 rounded-lg border p-3 ${info.tarjeta}`}>
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className={`rounded-full px-2 py-0.5 font-medium ${info.clasesBadge}`}>{info.etiqueta}</span>
+          {/* Icono además del color: el verde/ámbar/rojo confirma, no informa. */}
+          <span className={`rounded-full px-2 py-0.5 font-medium ${info.insignia}`}>
+            <span aria-hidden>{info.icono}</span> {info.nombre}
+          </span>
           <span className="rounded-full border border-[var(--border)] px-1.5 py-0.5 opacity-60">
             {ETIQUETA_TIPO[prediccion.tipo] ?? ETIQUETA_TIPO.extrapolada}
           </span>
@@ -157,7 +144,7 @@ export function TarjetaPrediccion({ prediccion, senales, onResuelta, nombrePerso
             autoFocus
             placeholder="ej. la invité al asado y aceptó sin dudar"
           />
-          {error && <p className="text-xs text-red-500">{error}</p>}
+          {error && <p className="text-xs text-[var(--error)]">{error}</p>}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
             <button
               type="button"

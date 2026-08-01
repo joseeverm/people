@@ -38,6 +38,41 @@ export type Dominio = (typeof DOMINIOS)[number];
 export const CAPAS = ['periferica', 'intermedia', 'central'] as const;
 export type Capa = (typeof CAPAS)[number];
 
+/**
+ * Los 9 dominios agrupados en 3 familias por lo expuesto que está cada uno:
+ * lo que cualquiera puede observar, lo que se cuenta con confianza, y lo que
+ * la persona a veces ni se dice a sí misma.
+ *
+ * Existe para la UI: nueve colores serían ruido ilegible, tres agrupan sin
+ * mentir. Vive aquí y no en un módulo de estilos porque es una afirmación
+ * sobre la TAXONOMÍA (qué dominios se parecen entre sí), no sobre el pintado;
+ * el color que le toca a cada familia lo decide ui/semantica.ts.
+ *
+ * Ojo: la familia NO es la capa. Un dominio de 'superficie' puede conocerse a
+ * capa central (saber de verdad cómo son sus rutinas) y uno de 'profundidad'
+ * quedarse en periférica. Miden cosas distintas.
+ */
+export const FAMILIAS = ['superficie', 'estructura', 'profundidad'] as const;
+export type Familia = (typeof FAMILIAS)[number];
+
+export const FAMILIA_DOMINIO: Record<Dominio, Familia> = {
+  identidad_basica: 'superficie',
+  cotidianidad: 'superficie',
+  gustos_ocio: 'superficie',
+  trabajo_ambiciones: 'estructura',
+  relaciones: 'estructura',
+  historia_personal: 'estructura',
+  valores_creencias: 'profundidad',
+  miedos_inseguridades: 'profundidad',
+  autoimagen: 'profundidad',
+};
+
+export const NOMBRE_FAMILIA: Record<Familia, string> = {
+  superficie: 'superficie',
+  estructura: 'estructura',
+  profundidad: 'profundidad',
+};
+
 /** Orden numérico de capas para cálculos. */
 export const CAPA_VALOR: Record<Capa, number> = {
   periferica: 1,

@@ -4,6 +4,7 @@
  * (invariante #1, ver CLAUDE.md), así que aquí no hay edición ni borrado.
  */
 import type { Senal, TipoSenal } from '../../core/esquema';
+import { capaChip, familiaChip, NOMBRE_CAPA } from '../../ui/semantica';
 
 const NOMBRE_TIPO: Record<TipoSenal, string> = {
   observacion: 'observación',
@@ -67,13 +68,15 @@ export function VistaSenales({ senales }: Props) {
             <p className="mt-1">{s.contenido}</p>
 
             {s.etiquetas.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
+              /* Dos insignias por etiqueta en vez de "dominio/capa" en crudo: el
+                 dominio teñido por su FAMILIA y la capa en la rampa de
+                 profundidad. Ambas llevan su texto, así que el color agrupa
+                 pero no es lo que informa. */
+              <div className="mt-2 flex flex-wrap items-center gap-1">
                 {s.etiquetas.map((e, i) => (
-                  <span
-                    key={i}
-                    className="rounded-full border border-[var(--border)] px-2 py-0.5 text-xs opacity-80"
-                  >
-                    {e.dominio}/{e.capa}
+                  <span key={i} className="inline-flex items-center gap-1">
+                    <span {...familiaChip(e.dominio)}>{e.dominio.replace(/_/g, ' ')}</span>
+                    <span {...capaChip(e.capa)}>{NOMBRE_CAPA[e.capa]}</span>
                   </span>
                 ))}
               </div>

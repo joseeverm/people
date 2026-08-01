@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import type { Confianza, Contradiccion, Senal } from '../../core/esquema';
 import { ListaEvidencia } from './Afirmaciones';
+import { CONTRADICCION } from '../../ui/semantica';
 
 const CONFIANZA_ETIQUETA: Record<Confianza, string> = {
   baja: 'confianza baja',
@@ -20,10 +21,12 @@ function ContradiccionItem({ contradiccion, senales }: { contradiccion: Contradi
   const [abierta, setAbierta] = useState(false);
 
   return (
-    <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+    // Barra lateral gruesa + acento propio: es el hallazgo más valioso del
+    // sistema y tiene que saltar al recorrer la columna de secciones.
+    <div className={`${CONTRADICCION.tarjeta} p-3`}>
       <div className="flex items-start gap-2">
-        <span className="mt-0.5 shrink-0 text-amber-500" aria-hidden>
-          ⚡
+        <span className={`mt-0.5 shrink-0 ${CONTRADICCION.texto}`} aria-hidden>
+          {CONTRADICCION.icono}
         </span>
         <p className="flex-1 text-sm">{contradiccion.descripcion}</p>
       </div>
@@ -50,7 +53,7 @@ function ContradiccionItem({ contradiccion, senales }: { contradiccion: Contradi
       </div>
 
       {abierta && (
-        <div className="mt-2 border-t border-amber-500/30 pl-6 pt-2">
+        <div className={`mt-2 border-t pl-6 pt-2 ${CONTRADICCION.separador}`}>
           <ListaEvidencia ids={contradiccion.senalesEnTension} senales={senales} />
         </div>
       )}
@@ -67,8 +70,8 @@ export function SeccionContradicciones({ contradicciones, senales }: Props) {
   if (contradicciones.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="flex items-center gap-2 text-sm font-medium text-amber-600">
-        <span aria-hidden>⚡</span> Contradicciones
+      <h2 className={`flex items-center gap-2 text-sm font-medium ${CONTRADICCION.texto}`}>
+        <span aria-hidden>{CONTRADICCION.icono}</span> Contradicciones
       </h2>
       <div className="flex flex-col gap-2">
         {contradicciones.map((c, i) => (

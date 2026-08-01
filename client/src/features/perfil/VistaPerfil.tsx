@@ -240,7 +240,7 @@ export function VistaPerfil() {
       ) : (
         <>
           {error && (
-            <p className="whitespace-pre-wrap rounded-lg border border-red-500/40 bg-red-500/5 p-3 text-sm text-red-500">
+            <p className="whitespace-pre-wrap rounded-lg border border-[var(--error-borde)] bg-[var(--error-bg)] p-3 text-sm text-[var(--error)]">
               {error}
             </p>
           )}
@@ -265,7 +265,9 @@ export function VistaPerfil() {
           {perfil ? (
             <div className="flex flex-col gap-6">
               {/* El resumen cruza el ancho entero: es el encabezado del perfil. */}
-              <p className="rounded-lg border border-[var(--accent-border)] bg-[var(--accent-bg)] p-4 text-sm">
+              {/* Sin acento: es el texto del perfil, no un control. Destaca por
+                  fondo y borde neutros, no por el color de interacción. */}
+              <p className="rounded-lg border border-[var(--border)] bg-[var(--social-bg)] p-4 text-sm">
                 {perfil.resumen}
               </p>
 

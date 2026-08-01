@@ -7,12 +7,11 @@
  */
 import { useState } from 'react';
 import type { Afirmacion, Confianza, Senal } from '../../core/esquema';
+import { CERTEZA } from '../../ui/semantica';
 
-const ESTATUS_INFO: Record<Afirmacion['estatus'], { icono: string; color: string; etiqueta: string }> = {
-  hecho: { icono: '●', color: 'text-emerald-500', etiqueta: 'hecho' },
-  inferencia: { icono: '◐', color: 'text-sky-500', etiqueta: 'inferencia' },
-  especulacion: { icono: '○', color: 'text-amber-500', etiqueta: 'especulación' },
-};
+// El estatus epistémico ya no son tres colores sueltos: es un gradiente de
+// certeza (ver ui/semantica.ts). Lo que de verdad separa los tres es la FORMA
+// —icono ●/◐/○ y borde sólido vs. punteado—, no el tono.
 
 const CONFIANZA_ETIQUETA: Record<Confianza, string> = {
   baja: 'confianza baja',
@@ -58,12 +57,12 @@ export function ListaEvidencia({ ids, senales }: { ids: string[]; senales: Senal
 export function LeyendaEstatus() {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs opacity-70">
-      {(Object.keys(ESTATUS_INFO) as Afirmacion['estatus'][]).map(estatus => (
+      {(Object.keys(CERTEZA) as Afirmacion['estatus'][]).map(estatus => (
         <span key={estatus} className="flex items-center gap-1">
-          <span className={ESTATUS_INFO[estatus].color} aria-hidden>
-            {ESTATUS_INFO[estatus].icono}
+          <span className={CERTEZA[estatus].punto} aria-hidden>
+            {CERTEZA[estatus].icono}
           </span>
-          {ESTATUS_INFO[estatus].etiqueta}
+          {CERTEZA[estatus].nombre}
         </span>
       ))}
     </div>
@@ -77,10 +76,12 @@ interface PropsAfirmacion {
 
 function AfirmacionItem({ afirmacion, senales }: PropsAfirmacion) {
   const [abierta, setAbierta] = useState(false);
-  const info = ESTATUS_INFO[afirmacion.estatus];
+  const info = CERTEZA[afirmacion.estatus];
 
   return (
-    <div className="rounded-lg border border-[var(--border)]">
+    // El borde ES el dato: sólido cuando la afirmación se sostiene, PUNTEADO
+    // cuando es especulación. Se reconoce de reojo, sin leer ni distinguir tono.
+    <div className={`rounded-lg border ${info.borde}`}>
       {/* Toda la afirmación (texto + confianza + chevron) es el área de toque:
           toque-14 y padding propio, no un renglón de 20px. */}
       <button
@@ -89,7 +90,7 @@ function AfirmacionItem({ afirmacion, senales }: PropsAfirmacion) {
         className="flex toque-14 w-full items-start gap-2 p-3 text-left"
         onClick={() => setAbierta(v => !v)}
       >
-        <span className={`mt-0.5 shrink-0 ${info.color}`} aria-hidden>
+        <span className={`mt-0.5 shrink-0 ${info.punto}`} aria-label={info.nombre} role="img">
           {info.icono}
         </span>
         <span className="min-w-0 flex-1">

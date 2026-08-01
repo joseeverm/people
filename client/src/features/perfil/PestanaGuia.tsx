@@ -180,7 +180,7 @@ export function PestanaGuia({ persona, perfil, estado, senales }: Props) {
       </div>
 
       {error && (
-        <p className="whitespace-pre-wrap rounded-lg border border-red-500/40 bg-red-500/5 p-3 text-sm text-red-500">
+        <p className="whitespace-pre-wrap rounded-lg border border-[var(--error-borde)] bg-[var(--error-bg)] p-3 text-sm text-[var(--error)]">
           {error}
         </p>
       )}

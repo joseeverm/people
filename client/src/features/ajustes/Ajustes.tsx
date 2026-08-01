@@ -81,7 +81,7 @@ function SeccionCuenta() {
         {sesion?.user.email ?? 'Sin sesión'}
       </p>
       {pendientes > 0 && (
-        <p className="text-sm text-amber-600">
+        <p className="text-sm text-[var(--aviso)]">
           Quedan {pendientes} {pendientes === 1 ? 'operación' : 'operaciones'} sin subir. Se
           mantienen en este dispositivo hasta que vuelvas a entrar.
         </p>
@@ -194,14 +194,14 @@ export function Ajustes() {
           {exportando ? 'Exportando…' : 'Exportar copia'}
         </button>
         {resumenExport && <p className="text-sm opacity-70">{resumenExport}</p>}
-        {errorExport && <p className="text-sm text-red-500">{errorExport}</p>}
+        {errorExport && <p className="text-sm text-[var(--error)]">{errorExport}</p>}
       </section>
 
       {/* ---------------- Import ---------------- */}
       <section className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-4">
         <h2 className="text-base font-medium">Importar</h2>
         <p className="text-sm opacity-70">
-          Restaura una copia. <strong className="text-red-500">Reemplaza todos los datos actuales</strong>{' '}
+          Restaura una copia. <strong className="text-[var(--error)]">Reemplaza todos los datos actuales</strong>{' '}
           — no se fusiona con lo que ya hay.
         </p>
 
@@ -222,8 +222,8 @@ export function Ajustes() {
         </button>
 
         {confirmacion && (
-          <div className="flex flex-col gap-3 rounded-lg border border-red-500/40 bg-red-500/5 p-3">
-            <p className="text-sm font-medium text-red-500">
+          <div className="flex flex-col gap-3 rounded-lg border border-[var(--error-borde)] bg-[var(--error-bg)] p-3">
+            <p className="text-sm font-medium text-[var(--error)]">
               Esto reemplaza todos tus datos. No se puede deshacer.
             </p>
             <dl className="flex flex-col gap-1 text-sm">
@@ -244,7 +244,7 @@ export function Ajustes() {
             <div className="flex flex-col-reverse gap-2 sm:flex-row">
               <button
                 type="button"
-                className="toque-12 rounded-md bg-red-600 px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="toque-12 rounded-md bg-[var(--error)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={importando}
                 onClick={confirmarImport}
               >
@@ -264,7 +264,7 @@ export function Ajustes() {
 
         {resumenImport && <p className="text-sm opacity-70">{resumenImport}</p>}
         {errorImport && (
-          <p className="rounded-lg border border-red-500/40 bg-red-500/5 p-3 text-sm text-red-500">
+          <p className="rounded-lg border border-[var(--error-borde)] bg-[var(--error-bg)] p-3 text-sm text-[var(--error)]">
             {errorImport}
           </p>
         )}

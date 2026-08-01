@@ -144,7 +144,7 @@ export function NuevaPrediccion({ personaId, onCreada }: Props) {
         </div>
       </div>
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-[var(--error)]">{error}</p>}
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
         <button
           type="button"

@@ -86,7 +86,9 @@ export function ListaPersonas() {
               <span className="font-medium">{persona.nombre}</span>
               {/* El nivel se lee desde la lista, sin entrar al detalle. */}
               <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs opacity-70">
-                <span className="rounded-full border border-[var(--accent-border)] bg-[var(--accent-bg)] px-2 py-0.5 font-medium text-[var(--accent)]">
+                {/* El nivel es un dato, no un control: va en tinta neutra. Con
+                    acento parecería que se puede pulsar. */}
+                <span className="rounded-full border border-[var(--border)] px-2 py-0.5 font-medium text-[var(--certeza-alta)]">
                   Nivel {estado.nivel}
                 </span>
                 <span>{NOMBRE_NIVEL[estado.nivel]}</span>

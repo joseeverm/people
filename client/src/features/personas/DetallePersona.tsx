@@ -9,8 +9,7 @@ import { CAPA_VALOR, NOMBRE_NIVEL } from '../../core/esquema';
 import { calcularEstadoConocimiento, datosRadar } from '../../core/conocimiento';
 import { repo } from '../../data/dexie-repo';
 import { LeyendaRadar, Radar } from './Radar';
-
-const NOMBRE_CAPA = { periferica: 'periférica', intermedia: 'intermedia', central: 'central' } as const;
+import { capaColorPorNivel, NOMBRE_CAPA } from '../../ui/semantica';
 
 /**
  * Los nueve dominios con la capa a la que llega cada uno. Es la lectura exacta
@@ -36,14 +35,17 @@ function ListaDominios({ cobertura }: { cobertura: CoberturaDominio[] }) {
             </span>
             <span className="flex shrink-0 items-center gap-2">
               <span className="text-xs opacity-60">{c.capaMax ? NOMBRE_CAPA[c.capaMax] : 'sin señales'}</span>
-              {/* Tres puntos = los tres anillos del radar, rellenos hasta donde llega. */}
+              {/* Tres puntos = los tres anillos del radar, rellenos hasta donde
+                  llega y con el MISMO color de capa que usa el gráfico. Sin
+                  acento: esto es dato, no algo que se pueda tocar. */}
               <span className="flex gap-0.5" aria-hidden>
                 {[1, 2, 3].map(nivel => (
                   <span
                     key={nivel}
-                    className={`size-1.5 rounded-full ${
-                      nivel <= alcanzado ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'
-                    }`}
+                    className="size-1.5 rounded-full"
+                    style={{
+                      background: nivel <= alcanzado ? capaColorPorNivel(nivel) : 'var(--border)',
+                    }}
                   />
                 ))}
               </span>

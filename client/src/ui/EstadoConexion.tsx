@@ -12,7 +12,7 @@ export function AvisoSinConexion() {
   return (
     <div
       role="status"
-      className="border-t border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-center text-xs text-amber-600"
+      className="border-t border-[var(--aviso-borde)] bg-[var(--aviso-bg)] px-4 py-1.5 text-center text-xs text-[var(--aviso)]"
     >
       Sin conexión · puedes capturar, pero no clasificar
     </div>

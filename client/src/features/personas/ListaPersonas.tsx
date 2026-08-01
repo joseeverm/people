@@ -56,7 +56,7 @@ export function ListaPersonas() {
         <h1 className="text-lg font-medium">Personas</h1>
         <button
           type="button"
-          className="toque-11 shrink-0 rounded-md bg-[var(--accent)] px-3 text-sm font-medium text-white"
+          className="toque-11 shrink-0 rounded-md bg-[var(--accent)] px-3 text-sm font-medium text-[var(--accent-texto)]"
           onClick={() => setMostrarForm(v => !v)}
         >
           {mostrarForm ? 'cancelar' : '+ nueva persona'}

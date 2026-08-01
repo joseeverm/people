@@ -150,7 +150,7 @@ export function PestanaGuia({ persona, perfil, estado, senales }: Props) {
       <div className="flex flex-col items-stretch gap-2 sm:items-start">
         <button
           type="button"
-          className="toque-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+          className="toque-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-texto)] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
           onClick={generar}
           disabled={generando || sinPerfil || sinSenales}
         >

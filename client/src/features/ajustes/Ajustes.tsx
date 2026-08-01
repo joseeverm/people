@@ -187,7 +187,7 @@ export function Ajustes() {
         </p>
         <button
           type="button"
-          className="toque-12 w-full rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:self-start"
+          className="toque-12 w-full rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-texto)] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:self-start"
           disabled={exportando}
           onClick={exportar}
         >

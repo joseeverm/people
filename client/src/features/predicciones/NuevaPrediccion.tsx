@@ -33,7 +33,7 @@ function Chip({
       onClick={onClick}
       className={`toque-11 rounded-full border px-3 text-sm transition ${
         activo
-          ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+          ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-texto)]'
           : 'border-[var(--border)] bg-[var(--bg)] opacity-70 hover:opacity-100'
       }`}
     >
@@ -148,7 +148,7 @@ export function NuevaPrediccion({ personaId, onCreada }: Props) {
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
-          className="toque-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:opacity-40"
+          className="toque-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-texto)] disabled:opacity-40"
           onClick={guardar}
           disabled={guardando || !texto.trim()}
         >

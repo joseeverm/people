@@ -113,7 +113,7 @@ export function DetallePersona() {
         </div>
         <Link
           to={`/personas/${persona.id}/perfil`}
-          className="flex toque-12 shrink-0 items-center justify-center rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white sm:w-auto"
+          className="flex toque-12 shrink-0 items-center justify-center rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-texto)] sm:w-auto"
         >
           Ver perfil →
         </Link>

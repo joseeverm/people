@@ -140,7 +140,7 @@ export function Bandeja() {
         {listasParaClasificar.length > 0 && (
           <button
             type="button"
-            className="toque-11 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="toque-11 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-texto)] disabled:cursor-not-allowed disabled:opacity-40"
             onClick={clasificarPendientes}
             disabled={progreso !== null}
           >

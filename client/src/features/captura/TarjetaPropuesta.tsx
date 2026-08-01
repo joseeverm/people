@@ -43,10 +43,62 @@ function humanizar(slug: string): string {
   return slug.replace(/_/g, ' ');
 }
 
-/** Botón-chip tocable. `toque-11` mide 44px en móvil (el mínimo cómodo para el
- *  pulgar) y 32px en escritorio, donde 44px se ven enormes; ver index.css.
- *  Sustituye a los <select> nativos, incómodos en el celular. */
-function Chip({
+/**
+ * VOCABULARIO DE CHIPS — tres estados, tres tratamientos.
+ *
+ * La regla que lo ordena todo: **el relleno de acento significa "esto ya forma
+ * parte de la señal", y nada más.** Antes lo compartían el valor aplicado y el
+ * meramente enfocado en el formulario de "agregar etiqueta", así que un dominio
+ * que todavía no habías añadido se veía idéntico a uno ya puesto.
+ *
+ *  - APLICADO       relleno de acento + texto de alto contraste + ×. Está dentro.
+ *  - BORRADOR       contorno discontinuo + fondo teñido. Elegido en el formulario,
+ *                   todavía fuera de la señal hasta pulsar «+ etiqueta».
+ *  - DISPONIBLE     solo contorno, apagado. Se puede añadir; al pasar el cursor
+ *                   sube de opacidad y marca el borde, nunca acento.
+ *
+ * Todos miden `toque-11`: 44px en móvil (el mínimo cómodo para el pulgar) y
+ * 32px en escritorio, donde 44px se ven enormes (ver index.css).
+ */
+
+/** Clases del estado apagado. Compartidas por los chips que se pueden añadir y
+ *  por las opciones no elegidas de una selección única. */
+const CHIP_DISPONIBLE =
+  'border-[var(--border)] text-[var(--text)] opacity-70 hover:border-[var(--text)] hover:bg-[var(--social-bg)] hover:opacity-100';
+
+const CHIP_BASE = 'toque-11 rounded-full border px-3 text-sm transition';
+
+/** Ya forma parte de la señal. Todo el chip es el botón de quitar: el × es la
+ *  pista visual, pero el objetivo táctil es el chip entero. */
+function ChipAplicado({
+  nombre,
+  onQuitar,
+  children,
+}: {
+  /** Para el aria-label — el texto visible puede llevar formato. */
+  nombre: string;
+  onQuitar: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onQuitar}
+      aria-label={`Quitar ${nombre}`}
+      className={`${CHIP_BASE} flex items-center gap-1.5 border-[var(--accent)] bg-[var(--accent)] font-medium text-[var(--accent-texto)] hover:opacity-85`}
+    >
+      {children}
+      <span aria-hidden className="text-base leading-none opacity-70">
+        ×
+      </span>
+    </button>
+  );
+}
+
+/** Selección única donde la opción activa SÍ está aplicada (el tipo de la
+ *  señal, la capa de una etiqueta ya puesta): no se puede quitar, solo cambiar
+ *  por otra, así que va rellena pero sin ×. */
+function ChipSeleccionUnica({
   activo,
   onClick,
   children,
@@ -60,15 +112,64 @@ function Chip({
       type="button"
       aria-pressed={activo}
       onClick={onClick}
-      className={`toque-11 rounded-full border px-3 text-sm transition ${
+      className={`${CHIP_BASE} ${
         activo
-          ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
-          : 'border-[var(--border)] opacity-70 hover:opacity-100'
+          ? 'border-[var(--accent)] bg-[var(--accent)] font-medium text-[var(--accent-texto)]'
+          : CHIP_DISPONIBLE
       }`}
     >
       {children}
     </button>
   );
+}
+
+/** Elección dentro del formulario de "agregar": todavía NO está aplicada.
+ *  Contorno discontinuo y fondo teñido — reconocible como elegido, pero
+ *  claramente distinto de un chip que ya forma parte de la señal. */
+function ChipBorrador({
+  activo,
+  onClick,
+  children,
+}: {
+  activo: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={activo}
+      onClick={onClick}
+      className={`${CHIP_BASE} ${
+        activo
+          ? 'border-dashed border-[var(--accent)] bg-[var(--accent-bg)] font-medium text-[var(--accent)]'
+          : CHIP_DISPONIBLE
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Se puede añadir. Un toque lo mueve a la zona de aplicados. */
+function ChipDisponible({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} className={`${CHIP_BASE} ${CHIP_DISPONIBLE}`}>
+      + {children}
+    </button>
+  );
+}
+
+/** Rótulo de zona. Lo que separa "esto ya está puesto" de "esto se puede poner". */
+function RotuloZona({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-[11px] font-medium uppercase tracking-wide opacity-50">{children}</span>
+  );
+}
+
+/** Línea que parte las dos zonas de un selector. */
+function SeparadorZona() {
+  return <div className="border-t border-dashed border-[var(--border)]" />;
 }
 
 const NOMBRE_TIPO: Record<TipoSenal, string> = {
@@ -116,7 +217,12 @@ function SelectorMultiple({
 }) {
   const [nuevo, setNuevo] = useState('');
 
-  const opciones = Array.from(new Set([...sugeridos, ...usados]));
+  // Se normaliza ANTES de deduplicar: si no, "Solo conmigo" y "solo_conmigo"
+  // sobreviven las dos al Set y aparecen como dos opciones que hacen lo mismo.
+  const opciones = normalizarLista([...sugeridos, ...usados]);
+  // Lo aplicado sale de la lista de abajo: un chip está en una zona o en la
+  // otra, nunca en las dos. Es lo que hace la separación legible de un vistazo.
+  const disponibles = opciones.filter(o => !seleccionados.includes(o));
 
   function alternar(valor: string) {
     const n = normalizar(valor);
@@ -135,39 +241,61 @@ function SelectorMultiple({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs opacity-70">{etiqueta}</span>
-      <div className="flex flex-wrap gap-2">
-        {opciones.map(o => {
-          const n = normalizar(o);
-          return (
-            <Chip key={n} activo={seleccionados.includes(n)} onClick={() => alternar(n)}>
-              {n}
-            </Chip>
-          );
-        })}
+    <div className="flex flex-col gap-3">
+      <span className="text-xs font-medium opacity-70">{etiqueta}</span>
+
+      {/* ---- Zona 1: lo que ya forma parte de la señal ---- */}
+      <div className="flex flex-col gap-1.5">
+        <RotuloZona>En esta señal</RotuloZona>
+        {seleccionados.length === 0 ? (
+          <p className="text-xs italic opacity-40">nada todavía — toca una opción de abajo</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {seleccionados.map(v => (
+              <ChipAplicado key={v} nombre={v} onQuitar={() => alternar(v)}>
+                {v}
+              </ChipAplicado>
+            ))}
+          </div>
+        )}
       </div>
-      <div className="flex items-center gap-2">
-        <input
-          className="toque-11 flex-1 rounded border border-[var(--border)] bg-transparent px-3 text-sm"
-          value={nuevo}
-          onChange={e => setNuevo(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              agregarNuevo();
-            }
-          }}
-          placeholder="agregar otro…"
-        />
-        <button
-          type="button"
-          className="toque-caja shrink-0 rounded border border-[var(--border)] text-lg"
-          aria-label={`Agregar a ${etiqueta}`}
-          onClick={agregarNuevo}
-        >
-          +
-        </button>
+
+      <SeparadorZona />
+
+      {/* ---- Zona 2: lo que se puede añadir ---- */}
+      <div className="flex flex-col gap-1.5">
+        <RotuloZona>Agregar</RotuloZona>
+        {disponibles.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {disponibles.map(o => (
+              <ChipDisponible key={o} onClick={() => alternar(o)}>
+                {o}
+              </ChipDisponible>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <input
+            className="toque-11 flex-1 rounded border border-[var(--border)] bg-transparent px-3 text-sm"
+            value={nuevo}
+            onChange={e => setNuevo(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                agregarNuevo();
+              }
+            }}
+            placeholder="otro…"
+          />
+          <button
+            type="button"
+            className="toque-caja shrink-0 rounded border border-[var(--border)] text-lg"
+            aria-label={`Agregar a ${etiqueta}`}
+            onClick={agregarNuevo}
+          >
+            +
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -189,6 +317,12 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
   const situacionUsada = normalizarLista(senales.flatMap(s => s.situacion ?? []));
 
   const pistasAclaracion = propuesta.aclaraciones.map(a => PISTA_ACLARACION[a.tipo]);
+
+  // El borrador ya existe arriba. Antes «+ etiqueta» simplemente no hacía nada
+  // y parecía que el botón estaba roto; ahora se deshabilita y se dice por qué.
+  const etiquetaYaPuesta = etiquetas.some(
+    e => e.dominio === nuevoDominio && e.capa === nuevaCapa
+  );
 
   function agregarEtiqueta() {
     if (etiquetas.some(e => e.dominio === nuevoDominio && e.capa === nuevaCapa)) return;
@@ -241,13 +375,20 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
           <p className="text-xs text-amber-600">El clasificador pide revisar: {pistasAclaracion.join(', ')}.</p>
         )}
 
+        {/* El tipo es selección única y SIEMPRE hay uno aplicado: relleno de
+            acento para el vigente, contorno apagado para el resto. No lleva ×
+            porque no se puede quitar, solo cambiar por otro. */}
         <div className="flex flex-col gap-2">
-          <span className="text-xs opacity-70">Tipo</span>
+          <span className="text-xs font-medium opacity-70">Tipo</span>
           <div className="flex flex-wrap gap-2">
             {Object.entries(NOMBRE_TIPO).map(([valor, nombre]) => (
-              <Chip key={valor} activo={tipo === valor} onClick={() => setTipo(valor as TipoSenal)}>
+              <ChipSeleccionUnica
+                key={valor}
+                activo={tipo === valor}
+                onClick={() => setTipo(valor as TipoSenal)}
+              >
                 {nombre}
-              </Chip>
+              </ChipSeleccionUnica>
             ))}
           </div>
         </div>
@@ -274,59 +415,92 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
       </div>
 
       <div className="flex flex-col gap-3">
-        <span className="text-xs opacity-70">Etiquetas</span>
+        <span className="text-xs font-medium opacity-70">Etiquetas</span>
 
-        {/* Cada etiqueta puesta es un bloque propio: dominio + su capa como
-            chips, en vez de un <select> diminuto dentro de una píldora. */}
-        {etiquetas.map((e, i) => (
-          <div
-            key={`${e.dominio}-${i}`}
-            className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-3"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm capitalize">{humanizar(e.dominio)}</span>
-              <button
-                type="button"
-                className="flex toque-caja shrink-0 items-center justify-center rounded-full text-lg opacity-60 hover:opacity-100"
-                aria-label={`Quitar ${humanizar(e.dominio)}`}
-                onClick={() => quitarEtiqueta(i)}
+        {/* ---- Zona 1: las etiquetas que ya lleva la señal ---- */}
+        <div className="flex flex-col gap-2">
+          <RotuloZona>En esta señal</RotuloZona>
+          {etiquetas.length === 0 ? (
+            <p className="text-xs italic opacity-40">ninguna todavía — arma una abajo</p>
+          ) : (
+            // Cada etiqueta puesta es un bloque propio: dominio + su capa como
+            // chips, en vez de un <select> diminuto dentro de una píldora. El
+            // fondo de acento del bloque repite el mensaje de sus chips: esto
+            // ya está dentro.
+            etiquetas.map((e, i) => (
+              <div
+                key={`${e.dominio}-${i}`}
+                className="flex flex-col gap-2 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-bg)] p-3"
               >
-                ×
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {CAPAS.map(c => (
-                <Chip key={c} activo={e.capa === c} onClick={() => cambiarCapaEtiqueta(i, c)}>
-                  {c}
-                </Chip>
-              ))}
-            </div>
-          </div>
-        ))}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium capitalize">{humanizar(e.dominio)}</span>
+                  <button
+                    type="button"
+                    className="flex toque-caja shrink-0 items-center justify-center rounded-full text-lg opacity-60 hover:bg-[var(--bg)] hover:opacity-100"
+                    aria-label={`Quitar ${humanizar(e.dominio)}`}
+                    onClick={() => quitarEtiqueta(i)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {CAPAS.map(c => (
+                    <ChipSeleccionUnica
+                      key={c}
+                      activo={e.capa === c}
+                      onClick={() => cambiarCapaEtiqueta(i, c)}
+                    >
+                      {c}
+                    </ChipSeleccionUnica>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
 
+        <SeparadorZona />
+
+        {/* ---- Zona 2: armar una etiqueta nueva ----
+            Todo lo de aquí dentro es BORRADOR hasta pulsar «+ etiqueta»: por
+            eso el dominio y la capa elegidos van con contorno discontinuo y no
+            con el relleno de acento de los de arriba. */}
         <div className="flex flex-col gap-3 rounded-lg border border-dashed border-[var(--border)] p-3">
-          <span className="text-xs opacity-70">Agregar etiqueta</span>
+          <div className="flex flex-col gap-0.5">
+            <RotuloZona>Agregar etiqueta</RotuloZona>
+            <span className="text-xs opacity-55">
+              Elige dominio y capa, y confirma con «+ etiqueta».
+            </span>
+          </div>
           <div className="flex flex-wrap gap-2">
             {DOMINIOS.map(d => (
-              <Chip key={d} activo={nuevoDominio === d} onClick={() => setNuevoDominio(d)}>
+              <ChipBorrador key={d} activo={nuevoDominio === d} onClick={() => setNuevoDominio(d)}>
                 {humanizar(d)}
-              </Chip>
+              </ChipBorrador>
             ))}
           </div>
           <div className="flex flex-wrap gap-2">
             {CAPAS.map(c => (
-              <Chip key={c} activo={nuevaCapa === c} onClick={() => setNuevaCapa(c)}>
+              <ChipBorrador key={c} activo={nuevaCapa === c} onClick={() => setNuevaCapa(c)}>
                 {c}
-              </Chip>
+              </ChipBorrador>
             ))}
           </div>
+          {/* rounded-md y no rounded-full: es un botón de acción, no un chip.
+              La forma ya lo separa del vocabulario de chips de alrededor. */}
           <button
             type="button"
-            className="toque-11 rounded-md border border-[var(--border)] px-3 text-sm"
+            className="toque-11 self-start rounded-md border border-[var(--accent-border)] px-3 text-sm font-medium text-[var(--accent)] transition hover:bg-[var(--accent-bg)] disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:text-[var(--text)] disabled:opacity-40"
             onClick={agregarEtiqueta}
+            disabled={etiquetaYaPuesta}
           >
             + etiqueta
           </button>
+          {etiquetaYaPuesta && (
+            <span className="text-xs opacity-55">
+              Esa combinación ya está arriba. Cambia el dominio o la capa.
+            </span>
+          )}
         </div>
       </div>
 
@@ -335,7 +509,7 @@ export function TarjetaPropuesta({ captura, entrada, propuesta, senales, onConfi
 
       <button
         type="button"
-        className="toque-12 w-full rounded-md bg-[var(--accent)] px-4 text-base font-medium text-white md:text-sm lg:col-span-2"
+        className="toque-12 w-full rounded-md bg-[var(--accent)] px-4 text-base font-medium text-[var(--accent-texto)] md:text-sm lg:col-span-2"
         onClick={confirmar}
       >
         Confirmar

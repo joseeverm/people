@@ -161,7 +161,7 @@ export function TarjetaPrediccion({ prediccion, senales, onResuelta, nombrePerso
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
             <button
               type="button"
-              className="toque-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:opacity-40"
+              className="toque-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-texto)] disabled:opacity-40"
               onClick={confirmarResolucion}
               disabled={guardando || !texto.trim()}
             >

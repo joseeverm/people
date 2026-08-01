@@ -9,6 +9,11 @@
   --accent: #aa3bff;
   --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
+  /* Texto SOBRE un relleno de acento. Es una variable y no un `text-white`
+     fijo porque el acento claro y el oscuro piden lo contrario: blanco sobre
+     #aa3bff da 4,4:1, pero sobre el #c084fc del tema oscuro se queda en 2,6:1
+     —ilegible—, y ahí lo que contrasta es texto oscuro (6,9:1). */
+  --accent-texto: #fff;
   --social-bg: rgba(244, 243, 236, 0.5);
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
@@ -47,6 +52,7 @@
     --accent: #c084fc;
     --accent-bg: rgba(192, 132, 252, 0.15);
     --accent-border: rgba(192, 132, 252, 0.5);
+    --accent-texto: #16171d;
     --social-bg: rgba(47, 48, 58, 0.5);
     --shadow:
       rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;

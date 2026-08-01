@@ -40,6 +40,13 @@ interface MetaSync {
 const SIN_CAMBIOS: ResultadoBajadaTabla = { insertadas: 0, actualizadas: 0, omitidas: 0 };
 
 /**
+ * Se emite en `window` cuando otra pestaña con el esquema ANTERIOR impide subir
+ * de versión. Mientras eso dure, `open()` no resuelve y toda operación del repo
+ * se queda esperando indefinidamente sin lanzar: hay que decirlo en la UI.
+ */
+export const EVENTO_BASE_BLOQUEADA = 'base:bloqueada';
+
+/**
  * Dexie deriva de T tanto el tipo de la clave como el de inserción (donde `id`
  * pasa a ser opcional). Con un T todavía sin instanciar eso no resuelve, y los
  * helpers genéricos de la bajada dejan de compilar por `anyOf(string[])`.
@@ -91,6 +98,27 @@ export class DexieRepo extends Dexie implements Repository {
     // que es lo único que se consulta (la última de cada persona).
     this.version(4).stores({
       guias: 'id, personaId, generadaEn',
+    });
+
+    // ----------------------------------------------------------------
+    // Subidas de versión con varias pestañas abiertas
+    // ----------------------------------------------------------------
+    // IndexedDB no sube de versión mientras otra conexión siga abierta con la
+    // anterior. Y no falla: `open()` simplemente NO RESUELVE. Como todo el
+    // repo empieza por abrir la base, cualquier escritura se queda esperando
+    // para siempre — sin lanzar, sin error, sin nada que ver en pantalla.
+    // En una PWA es el caso normal, no el raro: la app instalada y una pestaña
+    // del navegador conviven, y basta con que una lleve el bundle viejo.
+
+    // Otra pestaña quiere subir de versión: soltamos nuestra conexión para no
+    // ser nosotros quienes la dejamos colgada.
+    this.on('versionchange', () => this.close());
+
+    // Al revés: alguien nos bloquea a NOSOTROS. Aquí ya no hay nada que hacer
+    // desde este lado, así que al menos se anuncia — un botón que no responde
+    // y no explica por qué es lo peor que puede pasar en la captura.
+    this.on('blocked', () => {
+      window.dispatchEvent(new CustomEvent(EVENTO_BASE_BLOQUEADA));
     });
   }
 

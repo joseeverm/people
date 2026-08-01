@@ -84,7 +84,7 @@ export function Login() {
 
         <button
           type="submit"
-          className="toque-12 rounded-md bg-[var(--accent)] px-4 font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="toque-12 rounded-md bg-[var(--accent)] px-4 font-medium text-[var(--accent-texto)] disabled:cursor-not-allowed disabled:opacity-40"
           disabled={entrando || !email.trim() || !password}
         >
           {entrando ? 'Entrando…' : 'Entrar'}

@@ -248,7 +248,7 @@ export function VistaPerfil() {
           <div className="flex flex-col items-stretch gap-2 sm:items-start">
             <button
               type="button"
-              className="toque-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+              className="toque-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-texto)] disabled:cursor-not-allowed disabled:opacity-40"
               onClick={regenerar}
               disabled={generando || senales.length === 0 || sinSenalesNuevas}
             >

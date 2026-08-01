@@ -21,6 +21,7 @@ import type {
   CapturaPendiente,
   Prediccion,
   PerfilGenerado,
+  GuiaRelacion,
   ExportBundle,
 } from '../core/esquema';
 import type { EntidadSync, OperacionOutbox, OperacionPendiente } from './outbox';
@@ -57,6 +58,7 @@ export class DexieRepo extends Dexie implements Repository {
   capturasPendientes!: EntityTable<CapturaPendiente, 'idLocal'>;
   predicciones!: EntityTable<Prediccion, 'id'>;
   perfiles!: EntityTable<PerfilGenerado, 'id'>;
+  guias!: EntityTable<GuiaRelacion, 'id'>;
   outbox!: EntityTable<OperacionOutbox, 'id'>;
   syncMeta!: EntityTable<MetaSync, 'clave'>;
 
@@ -83,6 +85,12 @@ export class DexieRepo extends Dexie implements Repository {
     // dispositivo nuevo baja el historial entero.
     this.version(3).stores({
       syncMeta: 'clave',
+    });
+    // v4: guías de relación. Snapshots como los perfiles (se agregan, nunca se
+    // sobreescriben), así que el índice es el mismo: por persona y por fecha,
+    // que es lo único que se consulta (la última de cada persona).
+    this.version(4).stores({
+      guias: 'id, personaId, generadaEn',
     });
   }
 
@@ -274,6 +282,25 @@ export class DexieRepo extends Dexie implements Repository {
   }
 
   // ------------------------------------------------------------
+  // guías de relación (mismas reglas que los perfiles: solo snapshots)
+  // ------------------------------------------------------------
+
+  async guardarGuia(g: Omit<GuiaRelacion, 'id'>): Promise<GuiaRelacion> {
+    const guia: GuiaRelacion = { ...g, id: crypto.randomUUID() };
+    await this.transaction('rw', this.guias, this.outbox, async () => {
+      await this.guias.add(guia);
+      await this.encolar({ entidad: 'guia', payload: guia }, 'insert');
+    });
+    return guia;
+  }
+
+  async ultimaGuia(personaId: string): Promise<GuiaRelacion | null> {
+    const guias = await this.guias.where('personaId').equals(personaId).toArray();
+    if (guias.length === 0) return null;
+    return guias.reduce((mas, g) => (g.generadaEn > mas.generadaEn ? g : mas));
+  }
+
+  // ------------------------------------------------------------
   // outbox (lo consume sync.ts; la UI solo lee el contador)
   // ------------------------------------------------------------
 
@@ -306,8 +333,8 @@ export class DexieRepo extends Dexie implements Repository {
    * repository.ts para el porqué (backup restaurado / datos pre-outbox).
    *
    * La operación elegida por entidad NO es casual:
-   *  - inmutables ('senal', 'perfil') → 'insert'. Si ya estaban arriba, el
-   *    23505 se trata como éxito y no se toca la fila del servidor, que es
+   *  - inmutables ('senal', 'perfil', 'guia') → 'insert'. Si ya estaban arriba,
+   *    el 23505 se trata como éxito y no se toca la fila del servidor, que es
    *    justo lo que se quiere de algo inmutable.
    *  - mutables ('persona', 'prediccion') → 'update', que sube como upsert:
    *    exista o no en el servidor, queda con el estado local, que es lo que
@@ -317,13 +344,11 @@ export class DexieRepo extends Dexie implements Repository {
    * dejar una reparación a medias que parezca completa.
    */
   async encolarTodoLoLocal(): Promise<number> {
+    // Las tablas van en array y no sueltas: la sobrecarga variádica de Dexie
+    // llega hasta cinco, y aquí son seis.
     return this.transaction(
       'rw',
-      this.personas,
-      this.senales,
-      this.predicciones,
-      this.perfiles,
-      this.outbox,
+      [this.personas, this.senales, this.predicciones, this.perfiles, this.guias, this.outbox],
       async () => {
         const yaEncolado = new Set(
           (await this.outbox.toArray()).map(op => `${op.entidad}:${op.payload.id}`)
@@ -353,6 +378,11 @@ export class DexieRepo extends Dexie implements Repository {
           await this.encolar({ entidad: 'perfil', payload: p }, 'insert');
           encoladas++;
         }
+        for (const g of await this.guias.toArray()) {
+          if (yaEncolado.has(`guia:${g.id}`)) continue;
+          await this.encolar({ entidad: 'guia', payload: g }, 'insert');
+          encoladas++;
+        }
 
         return encoladas;
       }
@@ -370,6 +400,8 @@ export class DexieRepo extends Dexie implements Repository {
         return this.aplicarInmutables(comoTablaDeIds(this.senales), lote.filas);
       case 'perfil':
         return this.aplicarInmutables(comoTablaDeIds(this.perfiles), lote.filas);
+      case 'guia':
+        return this.aplicarInmutables(comoTablaDeIds(this.guias), lote.filas);
       // Mutables: gana el servidor salvo que lo local esté sin subir.
       case 'persona':
         return this.aplicarMutables(comoTablaDeIds(this.personas), lote.filas, 'persona');
@@ -451,11 +483,12 @@ export class DexieRepo extends Dexie implements Repository {
   // ------------------------------------------------------------
 
   async exportar(): Promise<ExportBundle> {
-    const [personas, senales, predicciones, perfiles] = await Promise.all([
+    const [personas, senales, predicciones, perfiles, guias] = await Promise.all([
       this.personas.toArray(),
       this.senales.toArray(),
       this.predicciones.toArray(),
       this.perfiles.toArray(),
+      this.guias.toArray(),
     ]);
     return {
       version: 1,
@@ -464,14 +497,21 @@ export class DexieRepo extends Dexie implements Repository {
       senales,
       predicciones,
       perfiles,
+      guias,
     };
   }
 
   /**
-   * DESTRUCTIVO: reemplaza el contenido de las cuatro tablas del bundle. No
+   * DESTRUCTIVO: reemplaza el contenido de las cinco tablas del bundle. No
    * es un merge — restaurar un backup deja la base exactamente como estaba
    * cuando se exportó. Todo dentro de una transacción: si algo falla a mitad,
    * Dexie revierte y la base queda intacta (nunca vacía a medias).
+   *
+   * `guias` se vacía y repuebla como las demás, incluso restaurando un backup
+   * ANTERIOR a que existieran (donde el campo no viene y se lee como []). Es
+   * lo correcto: una guía cita IDs de señal, así que dejarlas vivas mientras
+   * las señales se reemplazan produciría guías apuntando a evidencia que ya
+   * no existe.
    *
    * `capturasPendientes` NO se toca a propósito: el ExportBundle no la
    * incluye, así que borrarla destruiría notas sin clasificar que ningún
@@ -496,17 +536,20 @@ export class DexieRepo extends Dexie implements Repository {
       this.senales,
       this.predicciones,
       this.perfiles,
+      this.guias,
       async () => {
         await Promise.all([
           this.personas.clear(),
           this.senales.clear(),
           this.predicciones.clear(),
           this.perfiles.clear(),
+          this.guias.clear(),
         ]);
         await this.personas.bulkAdd(b.personas);
         await this.senales.bulkAdd(b.senales);
         await this.predicciones.bulkAdd(b.predicciones);
         await this.perfiles.bulkAdd(b.perfiles);
+        await this.guias.bulkAdd(b.guias ?? []);
       }
     );
   }

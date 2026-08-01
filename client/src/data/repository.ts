@@ -16,6 +16,7 @@ import type {
   CapturaPendiente,
   Prediccion,
   PerfilGenerado,
+  GuiaRelacion,
   ExportBundle,
 } from '../core/esquema';
 import type { OperacionOutbox } from './outbox';
@@ -29,7 +30,8 @@ export type LoteBajada =
   | { entidad: 'persona'; filas: Persona[] }
   | { entidad: 'senal'; filas: Senal[] }
   | { entidad: 'prediccion'; filas: Prediccion[] }
-  | { entidad: 'perfil'; filas: PerfilGenerado[] };
+  | { entidad: 'perfil'; filas: PerfilGenerado[] }
+  | { entidad: 'guia'; filas: GuiaRelacion[] };
 
 export interface ResultadoBajadaTabla {
   insertadas: number;
@@ -74,6 +76,10 @@ export interface Repository {
   // perfiles (snapshots)
   guardarPerfil(p: Omit<PerfilGenerado, 'id'>): Promise<PerfilGenerado>;
   ultimoPerfil(personaId: string): Promise<PerfilGenerado | null>;
+  // guías de relación (snapshots, igual que los perfiles: se agregan, nunca
+  // se editan ni se sobreescriben)
+  guardarGuia(g: Omit<GuiaRelacion, 'id'>): Promise<GuiaRelacion>;
+  ultimaGuia(personaId: string): Promise<GuiaRelacion | null>;
   // ----------------------------------------------------------------
   // outbox — cola de subida (patrón outbox, ver data/outbox.ts)
   // ----------------------------------------------------------------
@@ -110,8 +116,8 @@ export interface Repository {
   /**
    * Aplica filas traídas del servidor. Reconcilia según la entidad:
    *
-   *  - `senal` y `perfil` son INMUTABLES: si el id ya está, se ignora (no
-   *    puede haber cambiado); si no, se inserta.
+   *  - `senal`, `perfil` y `guia` son INMUTABLES: si el id ya está, se ignora
+   *    (no puede haber cambiado); si no, se inserta.
    *  - `persona` y `prediccion` son mutables: gana el servidor, SALVO que
    *    haya una operación pendiente en el outbox para ese id — eso significa
    *    que lo local todavía no se ha subido y tiene prioridad.

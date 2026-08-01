@@ -27,8 +27,9 @@ import { SeccionMarcoSocial } from './MarcoSocial';
 import { SeccionHuecos } from './Huecos';
 import { VistaSenales } from './VistaSenales';
 import { PestanaPredicciones } from '../predicciones/PestanaPredicciones';
+import { PestanaGuia } from './PestanaGuia';
 
-type Pestana = 'perfil' | 'senales' | 'predicciones';
+type Pestana = 'perfil' | 'senales' | 'predicciones' | 'guia';
 
 /** Texto del indicador de calibración junto al nivel. */
 function textoCalibracion(estado: EstadoConocimiento): string {
@@ -203,13 +204,16 @@ export function VistaPerfil() {
               titulo: 'Predicciones',
               cuenta: predicciones.filter(pr => pr.estado === 'pendiente').length,
             },
+            { id: 'guia', titulo: 'Guía', cuenta: null },
           ] as const
         ).map(({ id, titulo, cuenta }) => (
           <button
             key={id}
             type="button"
             aria-pressed={pestana === id}
-            className={`flex toque-12 flex-1 flex-col items-center justify-center gap-0.5 px-2 text-sm sm:flex-none sm:flex-row sm:gap-1.5 sm:px-4 ${
+            // text-xs en móvil: con cuatro pestañas, "Predicciones" a 14px no
+            // entra en un cuarto de 375px sin partirse.
+            className={`flex toque-12 flex-1 flex-col items-center justify-center gap-0.5 px-1.5 text-xs sm:flex-none sm:flex-row sm:gap-1.5 sm:px-4 sm:text-sm ${
               pestana === id
                 ? 'border-b-2 border-[var(--accent)] font-medium'
                 : 'opacity-60 hover:opacity-100'
@@ -224,6 +228,8 @@ export function VistaPerfil() {
 
       {pestana === 'senales' ? (
         <VistaSenales senales={senales} />
+      ) : pestana === 'guia' ? (
+        estado && <PestanaGuia persona={persona} perfil={perfil} estado={estado} senales={senales} />
       ) : pestana === 'predicciones' ? (
         <PestanaPredicciones
           personaId={persona.id}

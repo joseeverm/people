@@ -117,18 +117,37 @@ interface PropsSeccion {
   titulo: string;
   afirmaciones: Afirmacion[];
   senales: Senal[];
+  /** Descripción bajo el título, cuando la sección necesita explicarse. */
+  nota?: string;
+  /**
+   * Qué mostrar si la lista viene vacía. SIN esta prop la sección desaparece
+   * entera (lo que hace el perfil: un bloque "Gustos" vacío es ruido).
+   * CON ella se muestra el título y este texto — que es lo que necesita la
+   * guía de relación, donde un bloque vacío es un resultado con significado:
+   * dice qué falta observar para poder llenarlo.
+   */
+  vacio?: string;
 }
 
-export function SeccionAfirmaciones({ titulo, afirmaciones, senales }: PropsSeccion) {
-  if (afirmaciones.length === 0) return null;
+export function SeccionAfirmaciones({ titulo, afirmaciones, senales, nota, vacio }: PropsSeccion) {
+  if (afirmaciones.length === 0 && !vacio) return null;
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium opacity-80">{titulo}</h2>
-      <div className="flex flex-col gap-2">
-        {afirmaciones.map((a, i) => (
-          <AfirmacionItem key={i} afirmacion={a} senales={senales} />
-        ))}
+      <div className="flex flex-col gap-0.5">
+        <h2 className="text-sm font-medium opacity-80">{titulo}</h2>
+        {nota && <p className="text-xs opacity-55">{nota}</p>}
       </div>
+      {afirmaciones.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-[var(--border)] p-3 text-sm opacity-60">
+          {vacio}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {afirmaciones.map((a, i) => (
+            <AfirmacionItem key={i} afirmacion={a} senales={senales} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

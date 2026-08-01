@@ -9,9 +9,9 @@
  * La escritura local nunca espera al servidor: `subir()` (ver sync.ts) vacía
  * esta cola después, cuando haya red y sesión.
  */
-import type { Persona, PerfilGenerado, Prediccion, Senal } from '../core/esquema';
+import type { GuiaRelacion, Persona, PerfilGenerado, Prediccion, Senal } from '../core/esquema';
 
-export type EntidadSync = 'persona' | 'senal' | 'prediccion' | 'perfil';
+export type EntidadSync = 'persona' | 'senal' | 'prediccion' | 'perfil' | 'guia';
 
 /** Qué entidad lleva cada payload. Empareja `entidad` con el tipo del `payload`
  *  para que el mapeo a Postgres no tenga que hacer `as` a ciegas. */
@@ -19,7 +19,8 @@ export type OperacionPendiente =
   | { entidad: 'persona'; payload: Persona }
   | { entidad: 'senal'; payload: Senal }
   | { entidad: 'prediccion'; payload: Prediccion }
-  | { entidad: 'perfil'; payload: PerfilGenerado };
+  | { entidad: 'perfil'; payload: PerfilGenerado }
+  | { entidad: 'guia'; payload: GuiaRelacion };
 
 export type OperacionOutbox = OperacionPendiente & {
   /** Autoincremental de Dexie: define el orden FIFO de subida. Opcional

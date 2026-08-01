@@ -2,7 +2,8 @@
  * PERFILADOR — Export / Import JSON (paso 6 del MVP)
  * ====================================================
  * Copia de seguridad completa y portable: `ExportBundle` tal cual está
- * definido en `core/esquema.ts` (version 1 + los cuatro arrays), sin lock-in.
+ * definido en `core/esquema.ts` (version 1 + cuatro arrays obligatorios y
+ * `guias`, que llegó después y es opcional), sin lock-in.
  *
  * Qué vive aquí:
  *  - construir el nombre de archivo y disparar la descarga en el navegador;
@@ -13,8 +14,8 @@
  * Lo que NO vive aquí: el reemplazo en sí. Eso lo hace `repo.importar()`
  * (una transacción, ver dexie-repo.ts) porque es persistencia.
  *
- * ⚠️ El import es DESTRUCTIVO: reemplaza personas, señales, predicciones y
- * perfiles. La UI debe confirmarlo explícitamente antes de llamar.
+ * ⚠️ El import es DESTRUCTIVO: reemplaza personas, señales, predicciones,
+ * perfiles y guías. La UI debe confirmarlo explícitamente antes de llamar.
  */
 
 import type { ExportBundle } from '../core/esquema';
@@ -26,6 +27,7 @@ export interface ResumenBundle {
   senales: number;
   predicciones: number;
   perfiles: number;
+  guias: number;
 }
 
 /** Error de validación de un archivo de import, con mensaje legible para la UI. */
@@ -54,6 +56,7 @@ export function contar(b: ExportBundle): ResumenBundle {
     senales: b.senales.length,
     predicciones: b.predicciones.length,
     perfiles: b.perfiles.length,
+    guias: b.guias?.length ?? 0,
   };
 }
 
@@ -72,7 +75,7 @@ export function descargarBundle(b: ExportBundle, nombre = nombreArchivoExport())
 
 /**
  * Export completo: pide el bundle al repositorio, lo descarga y devuelve el
- * resumen. Base vacía es un caso válido: produce un bundle con los cuatro
+ * resumen. Base vacía es un caso válido: produce un bundle con todos los
  * arrays vacíos (que además reimporta sin problema).
  */
 export async function exportarYDescargar(
@@ -88,7 +91,15 @@ export async function exportarYDescargar(
 // Import — validación
 // ------------------------------------------------------------
 
+/** Obligatorios: sin ellos el backup no es restaurable. */
 const CAMPOS_ARRAY = ['personas', 'senales', 'predicciones', 'perfiles'] as const;
+
+/**
+ * `guias` llegó después y NO es obligatorio: un backup exportado antes de que
+ * existieran es válido y debe seguir restaurándose. Si viene, se valida igual
+ * que el resto; si no viene, se trata como lista vacía (ver ExportBundle).
+ */
+const CAMPO_OPCIONAL = 'guias';
 
 function esObjeto(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -130,6 +141,13 @@ export function validarExportBundle(dato: unknown): ExportBundle {
     validarRegistros(campo, dato[campo] as unknown[]);
   }
 
+  const guias = dato[CAMPO_OPCIONAL];
+  if (guias !== undefined) {
+    if (!Array.isArray(guias))
+      throw new ErrorImport(`El campo "${CAMPO_OPCIONAL}" existe pero no es una lista.`);
+    validarRegistros(CAMPO_OPCIONAL, guias);
+  }
+
   // `senales` es el núcleo del sistema: exige además la persona protagonista.
   (dato.senales as Record<string, unknown>[]).forEach((s, i) => {
     if (!Array.isArray(s.personaIds) || s.personaIds.length === 0)
@@ -143,6 +161,7 @@ export function validarExportBundle(dato: unknown): ExportBundle {
     senales: dato.senales as ExportBundle['senales'],
     predicciones: dato.predicciones as ExportBundle['predicciones'],
     perfiles: dato.perfiles as ExportBundle['perfiles'],
+    guias: (guias as ExportBundle['guias']) ?? [],
   };
 }
 

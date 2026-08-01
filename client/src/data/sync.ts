@@ -23,7 +23,7 @@
  *    y se SIGUE con la siguiente, para que una operación envenenada no bloquee
  *    para siempre todo lo que venga detrás.
  */
-import type { PerfilGenerado, Persona, Prediccion, Senal } from '../core/esquema';
+import type { GuiaRelacion, PerfilGenerado, Persona, Prediccion, Senal } from '../core/esquema';
 import type { EntidadSync, OperacionOutbox } from './outbox';
 import { repo } from './dexie-repo';
 import type { LoteBajada } from './repository';
@@ -42,7 +42,7 @@ const PAGINA = 500;
 /** Orden del pull. Sin claves foráneas en el esquema el orden no afecta a la
  *  integridad; personas va primero solo para que la lista se pueble antes en
  *  la primera carga, que es la que se ve tardar. */
-const ENTIDADES: EntidadSync[] = ['persona', 'senal', 'prediccion', 'perfil'];
+const ENTIDADES: EntidadSync[] = ['persona', 'senal', 'prediccion', 'perfil', 'guia'];
 
 /** Claves de `syncMeta`. El cursor es por entidad y no global: una tabla con
  *  cambios recientes no debe empujar el cursor por delante de filas que otra
@@ -52,6 +52,7 @@ const CLAVE_CURSOR: Record<EntidadSync, string> = {
   senal: 'cursor:senales',
   prediccion: 'cursor:predicciones',
   perfil: 'cursor:perfiles',
+  guia: 'cursor:guias',
 };
 
 const CLAVE_ULTIMA_SYNC = 'ultimaSincronizacion';
@@ -149,11 +150,28 @@ function filaPerfil(p: PerfilGenerado, userId: string): Fila {
   };
 }
 
+function filaGuia(g: GuiaRelacion, userId: string): Fila {
+  return {
+    id: g.id,
+    user_id: userId,
+    persona_id: g.personaId,
+    generada_en: g.generadaEn,
+    ultima_senal_incluida: g.ultimaSenalIncluida,
+    modelo: g.modelo,
+    terreno_fertil: g.terrenoFertil,
+    terreno_minado: g.terrenoMinado,
+    como_se_abre: g.comoSeAbre,
+    que_valora_en_la_gente: g.queValoraEnLaGente,
+    siguiente_paso: g.siguientePaso,
+  };
+}
+
 const TABLA: Record<EntidadSync, string> = {
   persona: 'personas',
   senal: 'senales',
   prediccion: 'predicciones',
   perfil: 'perfiles',
+  guia: 'guias',
 };
 
 // ----------------------------------------------------------------------------
@@ -291,6 +309,33 @@ function desdePerfil(f: FilaPerfil): PerfilGenerado {
   };
 }
 
+interface FilaGuia extends FilaConMarca {
+  persona_id: string;
+  generada_en: string;
+  ultima_senal_incluida: string;
+  modelo: string;
+  terreno_fertil: GuiaRelacion['terrenoFertil'];
+  terreno_minado: GuiaRelacion['terrenoMinado'];
+  como_se_abre: GuiaRelacion['comoSeAbre'];
+  que_valora_en_la_gente: GuiaRelacion['queValoraEnLaGente'];
+  siguiente_paso: GuiaRelacion['siguientePaso'];
+}
+
+function desdeGuia(f: FilaGuia): GuiaRelacion {
+  return {
+    id: f.id,
+    personaId: f.persona_id,
+    generadaEn: f.generada_en,
+    ultimaSenalIncluida: f.ultima_senal_incluida,
+    modelo: f.modelo,
+    terrenoFertil: f.terreno_fertil,
+    terrenoMinado: f.terreno_minado,
+    comoSeAbre: f.como_se_abre,
+    queValoraEnLaGente: f.que_valora_en_la_gente,
+    siguientePaso: f.siguiente_paso,
+  };
+}
+
 /** Empaqueta una página cruda en el lote tipado que espera el repo. */
 function aLote(entidad: EntidadSync, filas: FilaConMarca[]): LoteBajada {
   switch (entidad) {
@@ -302,6 +347,8 @@ function aLote(entidad: EntidadSync, filas: FilaConMarca[]): LoteBajada {
       return { entidad, filas: (filas as FilaPrediccion[]).map(desdePrediccion) };
     case 'perfil':
       return { entidad, filas: (filas as FilaPerfil[]).map(desdePerfil) };
+    case 'guia':
+      return { entidad, filas: (filas as FilaGuia[]).map(desdeGuia) };
   }
 }
 
@@ -317,6 +364,8 @@ function traducir(op: OperacionOutbox, userId: string): { tabla: string; fila: F
       return { tabla: TABLA.prediccion, fila: filaPrediccion(op.payload, userId) };
     case 'perfil':
       return { tabla: TABLA.perfil, fila: filaPerfil(op.payload, userId) };
+    case 'guia':
+      return { tabla: TABLA.guia, fila: filaGuia(op.payload, userId) };
   }
 }
 

@@ -2,7 +2,7 @@
  * Ajustes — copia de seguridad (paso 6 del MVP).
  *
  * Export: descarga todo (personas, señales, predicciones y TODOS los
- * snapshots de perfiles) como `people-backup-AAAA-MM-DD.json`.
+ * snapshots de perfiles y de guías de relación) como `people-backup-AAAA-MM-DD.json`.
  *
  * Import: DESTRUCTIVO. El archivo se lee y valida primero; solo si valida se
  * muestra la comparación "lo que hay ahora" vs. "lo que trae el archivo" y se
@@ -37,13 +37,14 @@ function mensajeError(e: unknown): string {
   return String(e);
 }
 
-/** "3 personas · 41 señales · 2 predicciones · 5 perfiles" */
+/** "3 personas · 41 señales · 2 predicciones · 5 perfiles · 1 guía" */
 function describir(r: ResumenBundle): string {
   return [
     `${r.personas} ${r.personas === 1 ? 'persona' : 'personas'}`,
     `${r.senales} ${r.senales === 1 ? 'señal' : 'señales'}`,
     `${r.predicciones} ${r.predicciones === 1 ? 'predicción' : 'predicciones'}`,
     `${r.perfiles} ${r.perfiles === 1 ? 'perfil' : 'perfiles'}`,
+    `${r.guias} ${r.guias === 1 ? 'guía' : 'guías'}`,
   ].join(' · ');
 }
 
@@ -182,7 +183,7 @@ export function Ajustes() {
         <h2 className="text-base font-medium">Exportar</h2>
         <p className="text-sm opacity-70">
           Descarga un JSON con todo: personas, señales, predicciones y todos los
-          snapshots de perfiles.
+          snapshots de perfiles y de guías de relación.
         </p>
         <button
           type="button"

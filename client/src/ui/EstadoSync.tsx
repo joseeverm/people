@@ -18,6 +18,7 @@ const NOMBRE_ENTIDAD: Record<ProgresoBajada['entidad'], string> = {
   senal: 'señales',
   prediccion: 'predicciones',
   perfil: 'perfiles',
+  guia: 'guías',
 };
 
 interface Props {

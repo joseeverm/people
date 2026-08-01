@@ -297,6 +297,40 @@ export interface PerfilGenerado {
   prediccionesPropuestas: Omit<Prediccion, 'id' | 'creadaEn' | 'estado' | 'resueltaPor'>[];
 }
 
+/**
+ * GUÍA DE RELACIÓN — snapshot, como PerfilGenerado: se agregan, nunca se
+ * editan ni se sobreescriben.
+ *
+ * El perfil responde "quién es esta persona"; la guía responde "cómo me
+ * relaciono mejor con ella". Se genera A PARTIR del perfil (lo exige: sin
+ * perfil previo no hay guía) más la PROGRESIÓN DE CAPAS derivada de las
+ * señales — qué interacción concreta produjo cada avance de profundidad, que
+ * es lo que hace posible el bloque `comoSeAbre` y no está en ningún otro sitio.
+ *
+ * Los cinco bloques son Afirmacion[] por lo mismo que el perfil: cada punto
+ * cita su evidencia, declara confianza y estatus epistémico. Un bloque VACÍO
+ * es un resultado válido y con significado — dice qué falta observar — así que
+ * ni el motor lo rellena ni la vista lo esconde.
+ */
+export interface GuiaRelacion {
+  id: string;
+  personaId: string;
+  generadaEn: string;
+  /** Última señal incluida, para saber si la guía se quedó atrás. */
+  ultimaSenalIncluida: string;   // Senal.id
+  modelo: string;
+  /** Temas que la encienden, y POR QUÉ le interesan (el motivo subyacente). */
+  terrenoFertil: Afirmacion[];
+  /** Qué evitar, con qué señal indica que se está pisando ahí. */
+  terrenoMinado: Afirmacion[];
+  /** Por qué vía y a qué ritmo se revela esta persona (usa la progresión de capas). */
+  comoSeAbre: Afirmacion[];
+  /** Qué admira o desprecia en terceros, según sus comentarios sobre otros. */
+  queValoraEnLaGente: Afirmacion[];
+  /** Movimiento concreto y accionable para profundizar, dado el nivel actual. */
+  siguientePaso: Afirmacion[];
+}
+
 // ============================================================
 // 6. NIVEL DE CONOCIMIENTO — siempre derivado, nunca almacenado
 // ============================================================
@@ -410,6 +444,14 @@ export interface ExportBundle {
   senales: Senal[];
   predicciones: Prediccion[];
   perfiles: PerfilGenerado[];          // snapshots históricos incluidos
+  /**
+   * OPCIONAL a propósito, y sigue siendo `version: 1`: los backups exportados
+   * antes de que existieran las guías no traen el campo y tienen que poder
+   * restaurarse igual. Al importar se lee como `?? []`, que para un backup
+   * viejo significa "esta copia no tenía guías" — y como el import es un
+   * reemplazo total, las borra igual que hace con el resto.
+   */
+  guias?: GuiaRelacion[];
 }
 
 // ============================================================

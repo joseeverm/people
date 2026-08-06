@@ -59,6 +59,31 @@ function comoTablaDeIds<T extends { id: string }>(t: EntityTable<T, 'id'>): Tabl
   return t as unknown as Table<T, string>;
 }
 
+/**
+ * Nombre de la IndexedDB de un usuario. **Una base por usuario, físicamente
+ * separadas**: es lo que impide que dos personas que comparten navegador se
+ * vean los datos. No es una comodidad, es el aislamiento (ver CLAUDE.md §
+ * Multiusuario) — el `user_id` del servidor no protege nada en local, porque
+ * se estampa al subir y no vive en el registro.
+ *
+ * Separar por base y no filtrar por columna es a propósito: un filtro hay que
+ * acordarse de ponerlo en cada consulta, y la que se olvide filtra de más sin
+ * dar error. Aquí no hay nada que olvidar; la consulta no puede ni ver la base
+ * de otro. Además sobrevive a la sesión: si vuelves a entrar, tus datos siguen
+ * ahí sin volver a bajarlos (la app es offline-first, ver invariante #5).
+ */
+function nombreBase(userId: string): string {
+  return `perfilador-${userId}`;
+}
+
+/** La base de cuando la app era de un solo usuario y no existía este reparto. */
+const BASE_LEGADA = 'perfilador';
+
+/** Marca en localStorage de qué usuario se adoptó `BASE_LEGADA`. Vive fuera de
+ *  IndexedDB a propósito: tiene que poder consultarse ANTES de abrir ninguna
+ *  base, y vale para todas. */
+const CLAVE_ADOPCION = 'perfilador:base-legada-adoptada-por';
+
 export class DexieRepo extends Dexie implements Repository {
   personas!: EntityTable<Persona, 'id'>;
   senales!: EntityTable<Senal, 'id'>;
@@ -69,8 +94,8 @@ export class DexieRepo extends Dexie implements Repository {
   outbox!: EntityTable<OperacionOutbox, 'id'>;
   syncMeta!: EntityTable<MetaSync, 'clave'>;
 
-  constructor() {
-    super('perfilador');
+  constructor(nombre: string) {
+    super(nombre);
     this.version(1).stores({
       personas: 'id, nombre, archivada',
       // *personaIds: índice multi-entrada, una señal puede tocar varias personas.
@@ -583,5 +608,135 @@ export class DexieRepo extends Dexie implements Repository {
   }
 }
 
-/** Instancia única de la base local. El resto de la app la consume vía Repository. */
-export const repo: Repository = new DexieRepo();
+// ================================================================
+// Base activa (una por usuario) y fachada `repo`
+// ================================================================
+
+/** La base del usuario con sesión abierta. `null` = nadie ha entrado todavía. */
+let activo: { userId: string; base: DexieRepo } | null = null;
+
+/**
+ * Copia la base de la época de un solo usuario a la del primer usuario que
+ * entra, UNA sola vez en este navegador.
+ *
+ * Se copian las OCHO tablas, no las cinco del backup: `outbox` lleva lo que
+ * todavía no se ha subido (perderlo es perder datos que el servidor no tiene),
+ * `syncMeta` lleva los cursores del pull (perderlos rebajaría el historial
+ * entero) y `capturasPendientes` lleva notas sin clasificar que ningún backup
+ * devuelve (invariante #5).
+ *
+ * La base vieja NO se borra: queda como red de seguridad hasta que el usuario
+ * confirme que su app está entera. Lo que impide que un SEGUNDO usuario la
+ * herede es la marca en localStorage, no el borrado.
+ */
+async function adoptarBaseLegada(destino: DexieRepo, userId: string): Promise<void> {
+  if (localStorage.getItem(CLAVE_ADOPCION)) return;
+  if (!(await Dexie.exists(BASE_LEGADA))) {
+    // Nada que adoptar (instalación nueva): se marca igual, para no repetir la
+    // comprobación en cada arranque ni adoptar una base que aparezca después.
+    localStorage.setItem(CLAVE_ADOPCION, userId);
+    return;
+  }
+
+  const vieja = new DexieRepo(BASE_LEGADA);
+  try {
+    const [personas, senales, capturas, predicciones, perfiles, guias, outbox, meta] =
+      await Promise.all([
+        vieja.personas.toArray(),
+        vieja.senales.toArray(),
+        vieja.capturasPendientes.toArray(),
+        vieja.predicciones.toArray(),
+        vieja.perfiles.toArray(),
+        vieja.guias.toArray(),
+        vieja.outbox.toArray(),
+        vieja.syncMeta.toArray(),
+      ]);
+
+    // Todo o nada: una adopción a medias dejaría datos sin sus cursores (o al
+    // revés), que es justo el estado del que no se sale solo.
+    await destino.transaction(
+      'rw',
+      [
+        destino.personas,
+        destino.senales,
+        destino.capturasPendientes,
+        destino.predicciones,
+        destino.perfiles,
+        destino.guias,
+        destino.outbox,
+        destino.syncMeta,
+      ],
+      async () => {
+        await destino.personas.bulkPut(personas);
+        await destino.senales.bulkPut(senales);
+        await destino.capturasPendientes.bulkPut(capturas);
+        await destino.predicciones.bulkPut(predicciones);
+        await destino.perfiles.bulkPut(perfiles);
+        await destino.guias.bulkPut(guias);
+        // `++id` autoincremental: se dejan los ids originales para conservar el
+        // orden FIFO de la cola, que es lo único que garantiza que un update no
+        // se suba antes que el insert de la misma entidad.
+        await destino.outbox.bulkPut(outbox);
+        await destino.syncMeta.bulkPut(meta);
+      }
+    );
+
+    // Solo después de que la transacción haya cerrado bien: si algo revienta
+    // antes, la marca no se pone y el siguiente arranque lo reintenta.
+    localStorage.setItem(CLAVE_ADOPCION, userId);
+  } finally {
+    vieja.close();
+  }
+}
+
+/**
+ * Deja lista la base del usuario que acaba de entrar. **Hay que esperarla
+ * antes de renderizar nada que lea datos**: `repo` lanza si no hay base
+ * abierta, y esa es justamente la red que impide leer la base de otro.
+ *
+ * Idempotente para el mismo usuario (varios componentes llaman a `useSesion`).
+ * Con un usuario DISTINTO cierra la base anterior antes de abrir la nueva.
+ */
+export async function abrirRepo(userId: string): Promise<void> {
+  if (activo?.userId === userId) return;
+  activo?.base.close();
+  activo = null;
+
+  const base = new DexieRepo(nombreBase(userId));
+  await adoptarBaseLegada(base, userId);
+  activo = { userId, base };
+}
+
+/** Cierra la base al salir. Sin esto la conexión seguiría abierta y el
+ *  siguiente usuario podría bloquear una subida de versión (ver `blocked`). */
+export function cerrarRepo(): void {
+  activo?.base.close();
+  activo = null;
+}
+
+/**
+ * El resto de la app sigue haciendo `import { repo }` y no se entera de nada:
+ * esto delega en la base del usuario activo.
+ *
+ * Es un Proxy y no una lista de 25 métodos delegando a mano a propósito — esa
+ * lista habría que acordarse de ampliarla cada vez que crezca `Repository`, y
+ * el método que se olvide no daría error de compilación (el tipo lo cumple la
+ * fachada, no la lista). Aquí no hay nada que mantener sincronizado.
+ */
+export const repo: Repository = new Proxy({} as Repository, {
+  get(_destino, prop) {
+    // `then` aparte: cualquier `await`/`Promise.resolve()` que roce este objeto
+    // lo consulta para ver si es un thenable. Lanzar ahí convertiría un await
+    // inocente en un error que no señala a su causa. No es un método del
+    // contrato, así que undefined es la respuesta correcta.
+    if (prop === 'then') return undefined;
+    if (!activo) {
+      throw new Error(
+        `repo.${String(prop)}: no hay base abierta. Se accedió a los datos sin ` +
+          'sesión, o antes de que `abrirRepo` terminara (ver useSesion.ts).'
+      );
+    }
+    const valor = Reflect.get(activo.base, prop) as unknown;
+    return typeof valor === 'function' ? valor.bind(activo.base) : valor;
+  },
+});

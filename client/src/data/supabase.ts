@@ -25,8 +25,26 @@ export const supabase = createClient(url ?? 'http://localhost', anonKey ?? 'anon
     // La sesión vive en localStorage y se refresca sola: entrar una vez basta.
     persistSession: true,
     autoRefreshToken: true,
-    // No hay flujo OAuth ni magic links: nada que leer de la URL. Evita que el
-    // cliente se quede esperando parámetros que nunca llegan.
-    detectSessionInUrl: false,
+    // Google vuelve a la app con `?code=...` en la URL. Con esto activo el
+    // cliente canjea ese código por una sesión ANTES de resolver getSession()
+    // (ambos esperan a la misma inicialización interna), así que `useSesion`
+    // ya ve la sesión buena en su primera lectura: se entra directo, sin
+    // pasar otra vez por el login. Después limpia los parámetros de la URL.
+    detectSessionInUrl: true,
+    // PKCE (el valor por omisión, explícito porque de él depende el formato
+    // del redirect): el `code` viaja en la query, no en el fragmento `#`.
+    // El fragmento nunca llega al servidor, pero sí lo hace la query — por eso
+    // el redirect debe estar en la lista blanca de Supabase (ver README).
+    flowType: 'pkce',
   },
 });
+
+/**
+ * A dónde vuelve Google tras autenticar. Se calcula en tiempo de ejecución a
+ * propósito: la misma build corre en localhost y en Vercel, y una URL fija en
+ * .env obligaría a mantener dos builds. Lo que sí hay que declarar a mano son
+ * estas mismas URLs en Supabase (Authentication → URL Configuration).
+ */
+export function urlDeRetorno(): string {
+  return new URL(import.meta.env.BASE_URL, window.location.origin).toString();
+}

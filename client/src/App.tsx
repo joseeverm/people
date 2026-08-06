@@ -5,10 +5,12 @@ import { ListaPersonas } from './features/personas/ListaPersonas';
 import { DetallePersona } from './features/personas/DetallePersona';
 import { VistaPerfil } from './features/perfil/VistaPerfil';
 import { Ajustes } from './features/ajustes/Ajustes';
+import { EleccionAlmacenamiento } from './features/almacenamiento/EleccionAlmacenamiento';
 import { Login } from './features/auth/Login';
 import { AvisoSinConexion } from './ui/EstadoConexion';
 import { EstadoSync } from './ui/EstadoSync';
 import { useEstaEnLinea } from './ui/useEstaEnLinea';
+import { useModoAlmacenamiento } from './ui/useModoAlmacenamiento';
 import { useSesion } from './ui/useSesion';
 import { useSync } from './ui/useSync';
 
@@ -63,19 +65,48 @@ const ALTO_FRANJA_REM = 2;
 
 function App() {
   const enLinea = useEstaEnLinea();
-  const { sesion, cargando } = useSesion();
-  // El ciclo de sync solo arranca con sesión resuelta: sin ella no hay a quién
-  // subir ni de quién bajar (el RLS filtra por auth.uid()).
-  const sync = useSync(!!sesion);
+  const { sesion, cargando, error } = useSesion();
+  const { modo, elegir } = useModoAlmacenamiento(sesion?.user.id ?? null);
+  // El ciclo de sync solo arranca con sesión resuelta Y en modo nube: sin
+  // sesión no hay a quién subir (el RLS filtra por auth.uid()), y en modo local
+  // no debe salir nada del dispositivo. `sincronizar()` vuelve a comprobar el
+  // modo por su cuenta — esto solo evita montar los temporizadores.
+  const sync = useSync(!!sesion && modo === 'nube');
 
   if (cargando) {
     return <div className="p-6 text-sm opacity-70">Cargando…</div>;
+  }
+
+  // Sin base local no hay nada que enseñar: la app entera lee de ahí. Entrar
+  // igualmente daría una app vacía que además falla al escribir, que es peor
+  // que decirlo.
+  if (error) {
+    return (
+      <div className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-3 p-6">
+        <h1 className="text-lg font-medium">No se pudo abrir la app</h1>
+        <p className="rounded-lg border border-[var(--error-borde)] bg-[var(--error-bg)] p-3 text-sm text-[var(--error)]">
+          {error}
+        </p>
+        <p className="text-sm opacity-70">
+          Suele arreglarse cerrando las otras pestañas de People (y la app instalada) y
+          recargando.
+        </p>
+      </div>
+    );
   }
 
   // Puerta de la app: sin sesión no se muestra nada más. `useSesion` lee de
   // localStorage, así que una sesión ya guardada entra aunque no haya red.
   if (!sesion) {
     return <Login />;
+  }
+
+  // Primer arranque de este usuario en este dispositivo: antes de dejarle
+  // entrar hay que saber dónde van sus datos. Después ya no sería una elección
+  // sobre datos que no han salido de aquí — la app escribe (y en modo nube,
+  // sube) desde el primer segundo.
+  if (!modo) {
+    return <EleccionAlmacenamiento onElegir={elegir} />;
   }
 
   const franjas = (enLinea ? 0 : 1) + (sync.mostrar ? 1 : 0);

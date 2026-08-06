@@ -26,6 +26,7 @@
 import type { GuiaRelacion, PerfilGenerado, Persona, Prediccion, Senal } from '../core/esquema';
 import type { EntidadSync, OperacionOutbox } from './outbox';
 import { repo } from './dexie-repo';
+import { leerModo } from './modo-almacenamiento';
 import type { LoteBajada } from './repository';
 import { haySupabase, supabase } from './supabase';
 
@@ -61,6 +62,16 @@ const CLAVE_ULTIMA_SYNC = 'ultimaSincronizacion';
  *  abierta pueda recargar lo que muestra. Las vistas leen del repo al montar,
  *  así que sin esto los datos recién bajados no se ven hasta navegar. */
 export const EVENTO_DATOS_BAJADOS = 'sync:datos-bajados';
+
+/**
+ * Se emite al TERMINAR una pasada completa, saliera bien o mal (si salió mal,
+ * parte de la cola puede haberse subido igual y el contador también cambió).
+ *
+ * Distinto de `EVENTO_DATOS_BAJADOS`, que anuncia datos NUEVOS que obligan a
+ * recargar una vista: este solo dice "los contadores de sincronización ya no
+ * valen". No se emite en modo local, donde no hubo pasada que contar.
+ */
+export const EVENTO_SYNC_TERMINADO = 'sync:terminado';
 
 export interface ResultadoSubida {
   subidas: number;
@@ -652,14 +663,44 @@ export interface ResultadoSync {
   subida: ResultadoSubida;
   /** null si no se llegó a bajar (la subida se cortó por falta de red). */
   bajada: ResultadoBajada | null;
+  /** El usuario eligió "solo en este dispositivo": no se hizo nada, y eso es
+   *  el comportamiento correcto, no un fallo. */
+  omitidaPorModoLocal?: boolean;
 }
 
 let enCursoSync: Promise<ResultadoSync> | null = null;
+
+const NADA_SUBIDO: ResultadoSubida = {
+  subidas: 0,
+  pendientes: 0,
+  error: null,
+  sinConexion: false,
+};
+
+/**
+ * ¿Tiene este usuario permitido hablar con el servidor?
+ *
+ * La comprobación vive AQUÍ y no solo en la UI a propósito. Que el modo local
+ * no sincronice no es una preferencia de presentación: es la promesa que se le
+ * hizo al usuario en la pantalla de primer arranque ("no se envían a ningún
+ * lado"). Una promesa sostenida solo por que nadie pinte el botón se rompe la
+ * primera vez que alguien añada otra ruta hacia `sincronizar()` — el
+ * temporizador de useSync, el evento de volver la red, un botón nuevo. Aquí es
+ * la única puerta y no se puede rodear.
+ */
+async function puedeSincronizar(): Promise<boolean> {
+  const { data } = await supabase.auth.getSession();
+  const userId = data.session?.user.id;
+  if (!userId) return false;
+  return leerModo(userId) === 'nube';
+}
 
 /**
  * El ciclo completo: subir y DESPUÉS bajar. Nunca al revés — si se bajara
  * primero, un cambio local todavía encolado quedaría pisado por la versión
  * vieja del servidor antes de haber tenido ocasión de subir.
+ *
+ * En modo local no hace nada en absoluto (ver `puedeSincronizar`).
  */
 export function sincronizar(opciones: OpcionesSync = {}): Promise<ResultadoSync> {
   if (!enCursoSync) {
@@ -671,6 +712,9 @@ export function sincronizar(opciones: OpcionesSync = {}): Promise<ResultadoSync>
 }
 
 async function cicloCompleto(o: OpcionesSync): Promise<ResultadoSync> {
+  if (!(await puedeSincronizar())) {
+    return { subida: NADA_SUBIDO, bajada: null, omitidaPorModoLocal: true };
+  }
   try {
     o.alCambiarFase?.('subiendo');
     const subida = await subir();
@@ -692,10 +736,69 @@ async function cicloCompleto(o: OpcionesSync): Promise<ResultadoSync> {
     return { subida, bajada };
   } finally {
     o.alCambiarFase?.('quieto');
+    // Los contadores de "sin subir" que pinta Ajustes se leen al montar, y una
+    // pasada disparada desde OTRA sección (cambiar el modo a nube) los dejaba
+    // contradiciendo a la pantalla: "se subieron 1" junto a "queda 1 sin
+    // subir". Los datos estaban bien; lo que fallaba era que nadie avisaba.
+    window.dispatchEvent(new CustomEvent(EVENTO_SYNC_TERMINADO));
   }
 }
 
 /** Última sincronización completa correcta (ISO), o null si nunca hubo una. */
 export function leerUltimaSincronizacion(): Promise<string | null> {
   return repo.leerMeta(CLAVE_ULTIMA_SYNC);
+}
+
+// ----------------------------------------------------------------------------
+// Borrar lo propio del servidor
+// ----------------------------------------------------------------------------
+
+export interface ResultadoBorradoRemoto {
+  personas: number;
+  senales: number;
+  predicciones: number;
+  perfiles: number;
+  guias: number;
+}
+
+/** Lo lanza `borrarDatosDelServidor` cuando la migración no está aplicada.
+ *  Se distingue del resto porque es lo único que el usuario puede arreglar. */
+export class ErrorFaltaMigracion extends Error {}
+
+/**
+ * Vacía en el servidor todo lo de este usuario. NO toca nada local: el usuario
+ * conserva sus datos en el dispositivo, que es justamente lo que pidió al
+ * pasar a modo local.
+ *
+ * Va por la función `borrar_mis_datos()` y no por DELETE de la Data API porque
+ * el esquema no tiene —ni debe tener— permiso de borrado fila a fila (rompería
+ * el invariante de que las señales son inmutables). Ver la migración
+ * `20260805120000_borrar_mis_datos.sql`.
+ */
+export async function borrarDatosDelServidor(): Promise<ResultadoBorradoRemoto> {
+  if (!haySupabase) throw new Error('No hay servidor configurado.');
+
+  const { data, error } = await supabase.rpc('borrar_mis_datos');
+
+  if (error) {
+    // PGRST202 = PostgREST no encuentra la función. Es el síntoma exacto de la
+    // migración sin aplicar, y merece un mensaje que diga qué hacer en vez del
+    // críptico "Could not find the function public.borrar_mis_datos".
+    if (error.code === 'PGRST202' || /could not find the function/i.test(error.message)) {
+      throw new ErrorFaltaMigracion(
+        'El servidor todavía no sabe borrar datos: falta aplicar la migración ' +
+          '`borrar_mis_datos` (npx supabase db push). Tus datos siguen en el servidor.'
+      );
+    }
+    throw new Error(error.message);
+  }
+
+  const r = (data ?? {}) as Partial<Record<keyof ResultadoBorradoRemoto, number>>;
+  return {
+    personas: r.personas ?? 0,
+    senales: r.senales ?? 0,
+    predicciones: r.predicciones ?? 0,
+    perfiles: r.perfiles ?? 0,
+    guias: r.guias ?? 0,
+  };
 }

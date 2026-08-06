@@ -13,7 +13,10 @@ import { useEffect, useRef, useState } from 'react';
 import type { ExportBundle } from '../../core/esquema';
 import { repo } from '../../data/dexie-repo';
 import { supabase } from '../../data/supabase';
+import { EVENTO_SYNC_TERMINADO } from '../../data/sync';
+import { useModoAlmacenamiento } from '../../ui/useModoAlmacenamiento';
 import { useSesion } from '../../ui/useSesion';
+import { SeccionAlmacenamiento } from './SeccionAlmacenamiento';
 import { SeccionSync } from './SeccionSync';
 import {
   contar,
@@ -60,7 +63,14 @@ function SeccionCuenta() {
   const [saliendo, setSaliendo] = useState(false);
 
   useEffect(() => {
-    repo.contarPendientes().then(setPendientes);
+    const refrescar = () => {
+      repo.contarPendientes().then(setPendientes);
+    };
+    refrescar();
+    // Mismo motivo que en SeccionSync: el aviso de "quedan N sin subir" no
+    // puede seguir en pantalla después de que se hayan subido.
+    window.addEventListener(EVENTO_SYNC_TERMINADO, refrescar);
+    return () => window.removeEventListener(EVENTO_SYNC_TERMINADO, refrescar);
   }, []);
 
   async function salir() {
@@ -99,6 +109,8 @@ function SeccionCuenta() {
 }
 
 export function Ajustes() {
+  const { sesion } = useSesion();
+  const { modo, elegir } = useModoAlmacenamiento(sesion?.user.id ?? null);
   const [exportando, setExportando] = useState(false);
   const [resumenExport, setResumenExport] = useState<string | null>(null);
   const [errorExport, setErrorExport] = useState<string | null>(null);
@@ -176,11 +188,27 @@ export function Ajustes() {
 
       <SeccionCuenta />
 
-      <SeccionSync />
+      {modo && <SeccionAlmacenamiento modo={modo} onCambiar={elegir} />}
+
+      {/* En modo local no hay nada que sincronizar: enseñar el indicador y el
+          botón sugeriría que sí, y pulsarlo no haría nada. */}
+      {modo === 'nube' && <SeccionSync />}
 
       {/* ---------------- Export ---------------- */}
-      <section className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-4">
+      <section
+        className={`flex flex-col gap-2 rounded-lg border p-4 ${
+          modo === 'local'
+            ? 'border-[var(--accent-border)] bg-[var(--accent-bg)]'
+            : 'border-[var(--border)]'
+        }`}
+      >
         <h2 className="text-base font-medium">Exportar</h2>
+        {modo === 'local' && (
+          <p className="text-sm font-medium">
+            Esta es tu única copia de seguridad: nada sale de este dispositivo por su
+            cuenta. Descárgala de vez en cuando y guárdala en sitio seguro.
+          </p>
+        )}
         <p className="text-sm opacity-70">
           Descarga un JSON con todo: personas, señales, predicciones y todos los
           snapshots de perfiles y de guías de relación.
@@ -203,6 +231,7 @@ export function Ajustes() {
         <p className="text-sm opacity-70">
           Restaura una copia. <strong className="text-[var(--error)]">Reemplaza todos los datos actuales</strong>{' '}
           — no se fusiona con lo que ya hay.
+          {modo === 'local' && ' Es la forma de llevarte tus datos a otro dispositivo.'}
         </p>
 
         <input

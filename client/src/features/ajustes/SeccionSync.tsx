@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { repo } from '../../data/dexie-repo';
-import { leerUltimaSincronizacion, sincronizar } from '../../data/sync';
+import { EVENTO_SYNC_TERMINADO, leerUltimaSincronizacion, sincronizar } from '../../data/sync';
 
 /** "hace 5 min", "hace 2 h", "el 14/07/2026". Relativo mientras es útil. */
 function describirCuando(iso: string): string {
@@ -38,6 +38,11 @@ export function SeccionSync() {
 
   useEffect(() => {
     refrescar();
+    // Una pasada puede dispararla otro (el temporizador, la vuelta de la red, o
+    // el cambio de modo en la sección de arriba). Sin esto los contadores se
+    // quedan con la foto del montaje y contradicen lo que acaba de pasar.
+    window.addEventListener(EVENTO_SYNC_TERMINADO, refrescar);
+    return () => window.removeEventListener(EVENTO_SYNC_TERMINADO, refrescar);
   }, [refrescar]);
 
   /** Corre el ciclo y deja escrito el resultado. No gestiona `corriendo`: de

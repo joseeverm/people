@@ -294,6 +294,21 @@ raíz (los default privileges) para que la próxima tabla no repita el patrón.
 **Lección para futuras tablas del dominio**: no basta con no dar `grant`. Hay
 que revocar, y comprobarlo con `has_table_privilege` en vez de darlo por hecho.
 
+**Aplicado en `ajustes_usuario`** (07-08-2026, `20260807120000_ajustes_usuario.sql`),
+que es la sexta tabla y la primera que NO es del dominio: guarda el modo de
+almacenamiento, que es una decisión de la CUENTA y no del dispositivo (ver
+`client/CLAUDE.md` § Modo de almacenamiento). Lleva las tres políticas de
+siempre y `grant select, insert, update ... to authenticated`, sin delete.
+Comprobado en vivo contra el proyecto: leer la fila de otro usuario devuelve 0
+filas, escribirla da `42501 new row violates row-level security policy`, y una
+petición con solo la anon key responde `401 permission denied for table
+ajustes_usuario`.
+
+⚠️ `borrar_mis_datos()` **no la toca a propósito**, y no hay que "arreglarlo":
+si borrara esa fila, el modo quedaría sin definir y todos los dispositivos
+volverían a preguntar — justo el fallo que la tabla cierra. Ahí no hay datos
+sobre personas, solo una preferencia de dos valores.
+
 ⚠️ **Matiz honesto**: el client SÍ manda `user_id` en cada fila que sube
 (`sync.ts`, `filaPersona(p, userId)` y sus hermanas). No se puede falsificar
 —el `with check` rechaza cualquier valor distinto de `auth.uid()`, así que lo

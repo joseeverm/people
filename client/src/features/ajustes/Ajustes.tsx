@@ -110,7 +110,10 @@ function SeccionCuenta() {
 
 export function Ajustes() {
   const { sesion } = useSesion();
-  const { modo, elegir } = useModoAlmacenamiento(sesion?.user.id ?? null);
+  const userId = sesion?.user.id ?? null;
+  // Solo lee la caché: App ya resolvió el modo contra la cuenta antes de montar
+  // nada, y volver a consultarlo en cada visita a Ajustes sobraría.
+  const modo = useModoAlmacenamiento(userId);
   const [exportando, setExportando] = useState(false);
   const [resumenExport, setResumenExport] = useState<string | null>(null);
   const [errorExport, setErrorExport] = useState<string | null>(null);
@@ -188,7 +191,7 @@ export function Ajustes() {
 
       <SeccionCuenta />
 
-      {modo && <SeccionAlmacenamiento modo={modo} onCambiar={elegir} />}
+      {modo && userId && <SeccionAlmacenamiento userId={userId} modo={modo} />}
 
       {/* En modo local no hay nada que sincronizar: enseñar el indicador y el
           botón sugeriría que sí, y pulsarlo no haría nada. */}

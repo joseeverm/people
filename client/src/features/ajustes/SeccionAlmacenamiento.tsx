@@ -17,10 +17,25 @@
  *
  * Antes de cualquiera de los dos se ofrece exportar: es un cambio en dónde
  * viven los datos, y el momento de tener una copia es antes, no después.
+ *
+ * ---------------------------------------------------------------------------
+ * El modo es de la CUENTA, así que cambiarlo es escribir en el servidor
+ * ---------------------------------------------------------------------------
+ * Y el ORDEN de esas dos escrituras (servidor y caché local) es distinto en
+ * cada dirección, por lo que significa fallar en cada una:
+ *
+ *  - **local → nube**: primero el servidor. Si no se puede avisar a la cuenta,
+ *    el cambio no ha ocurrido y no se toca nada — para subir hace falta red de
+ *    todos modos, así que no se pierde nada esperando.
+ *  - **nube → local**: primero lo local. Lo que el usuario acaba de pedir es
+ *    que sus datos DEJEN de salir de aquí, y eso tiene efecto inmediato aunque
+ *    el servidor no conteste. Si el aviso a la cuenta falla, se dice claramente
+ *    que los otros dispositivos seguirán sincronizando hasta que se reintente.
  */
 import { useState } from 'react';
+import { guardarModoRemoto } from '../../data/ajustes-usuario';
 import { repo } from '../../data/dexie-repo';
-import type { ModoAlmacenamiento } from '../../data/modo-almacenamiento';
+import { guardarModo, type ModoAlmacenamiento } from '../../data/modo-almacenamiento';
 import { exportarYDescargar } from '../../data/export';
 import {
   borrarDatosDelServidor,
@@ -30,8 +45,8 @@ import {
 } from '../../data/sync';
 
 interface Props {
+  userId: string;
   modo: ModoAlmacenamiento;
-  onCambiar: (modo: ModoAlmacenamiento) => void;
 }
 
 /** En qué punto del cambio estamos. `null` = no se está cambiando nada. */
@@ -64,11 +79,14 @@ function describirBorrado(r: ResultadoBorradoRemoto): string {
   );
 }
 
-export function SeccionAlmacenamiento({ modo, onCambiar }: Props) {
+export function SeccionAlmacenamiento({ userId, modo }: Props) {
   const [paso, setPaso] = useState<Paso>(null);
   const [trabajando, setTrabajando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** El cambio a local ya tuvo efecto aquí, pero la cuenta no se enteró. Se
+   *  guarda aparte del `error` general porque tiene su propio reintento. */
+  const [cuentaSinAvisar, setCuentaSinAvisar] = useState<string | null>(null);
 
   async function exportarAntes() {
     setError(null);
@@ -79,39 +97,80 @@ export function SeccionAlmacenamiento({ modo, onCambiar }: Props) {
     }
   }
 
-  /** local → nube: encolar todo lo de este dispositivo y arrancar el ciclo. */
+  /** local → nube: avisar a la cuenta, encolar todo lo de aquí y subir. */
   async function pasarANube() {
     setTrabajando(true);
     setError(null);
     setAviso(null);
+    setCuentaSinAvisar(null);
     try {
-      // El orden importa: primero el modo, porque `sincronizar()` comprueba el
-      // modo y se negaría a correr si todavía dijera 'local'.
-      onCambiar('nube');
+      // 1. La cuenta primero: si esto falla, no se ha cambiado nada.
+      await guardarModoRemoto(userId, 'nube');
+      // 2. La caché local, que es lo que consulta `sincronizar()` en cada
+      //    pasada. Sin esto se negaría a correr por seguir leyendo 'local'.
+      guardarModo(userId, 'nube');
+      // 3. Encolar lo que el servidor NUNCA ha tenido. Sin este paso solo
+      //    subiría lo que se escriba de ahora en adelante.
       const encoladas = await repo.encolarTodoLoLocal();
       const r = await sincronizar();
+
+      const falloSubida = r.subida.sinConexion
+        ? ' No hay conexión ahora mismo: se subirá solo cuando vuelva.'
+        : r.subida.error
+          ? ` Hubo un problema al subir: ${r.subida.error}`
+          : '';
+
       setAviso(
-        `Ahora se guarda también en la nube. Se prepararon ${plural(encoladas, 'elemento', 'elementos')} ` +
-          `y se subieron ${r.subida.subidas}` +
+        `Ahora se guarda también en la nube, en esta y en tus demás sesiones. Se prepararon ` +
+          `${plural(encoladas, 'elemento', 'elementos')} y se subieron ${r.subida.subidas}` +
           (r.subida.pendientes > 0
             ? `; quedan ${plural(r.subida.pendientes, 'elemento', 'elementos')} en cola ` +
               '(se suben solos, o con «Sincronizar ahora»).'
-            : '.')
+            : '.') +
+          falloSubida
       );
       setPaso(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(
+        'No se pudo cambiar el modo: ' +
+          (e instanceof Error ? e.message : String(e)) +
+          ' Todo sigue como estaba.'
+      );
     } finally {
       setTrabajando(false);
     }
   }
 
-  /** nube → local: se corta el sync y se pasa a preguntar por la copia remota. */
-  function pasarALocal() {
+  /** Avisa a la cuenta de que ya está en local. Separado porque el cambio local
+   *  ya tuvo efecto y esto se puede reintentar sin repetir nada más. */
+  async function avisarCuentaLocal() {
+    try {
+      await guardarModoRemoto(userId, 'local');
+      setCuentaSinAvisar(null);
+      return true;
+    } catch (e) {
+      setCuentaSinAvisar(
+        'Este dispositivo ya no sincroniza, pero no se pudo avisar a tu cuenta (' +
+          (e instanceof Error ? e.message : String(e)) +
+          '). Tus otros dispositivos seguirán guardando en la nube hasta que se avise.'
+      );
+      return false;
+    }
+  }
+
+  /** nube → local: se corta el sync AQUÍ y ya, y después se avisa a la cuenta.
+   *  El corte local no espera al servidor: es lo que el usuario acaba de pedir. */
+  async function pasarALocal() {
     setError(null);
     setAviso(null);
-    onCambiar('local');
-    setPaso({ tipo: 'preguntar-borrado' });
+    setTrabajando(true);
+    try {
+      guardarModo(userId, 'local');
+      await avisarCuentaLocal();
+      setPaso({ tipo: 'preguntar-borrado' });
+    } finally {
+      setTrabajando(false);
+    }
   }
 
   async function borrarRemoto() {
@@ -183,7 +242,7 @@ export function SeccionAlmacenamiento({ modo, onCambiar }: Props) {
               type="button"
               className="toque-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-texto)] disabled:opacity-40"
               disabled={trabajando}
-              onClick={pasarANube}
+              onClick={() => void pasarANube()}
             >
               {trabajando ? 'Subiendo…' : 'Sí, subir a la nube'}
             </button>
@@ -223,9 +282,9 @@ export function SeccionAlmacenamiento({ modo, onCambiar }: Props) {
               type="button"
               className="toque-12 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-texto)] disabled:opacity-40"
               disabled={trabajando}
-              onClick={pasarALocal}
+              onClick={() => void pasarALocal()}
             >
-              Sí, dejar solo aquí
+              {trabajando ? 'Cambiando…' : 'Sí, dejar solo aquí'}
             </button>
             <button
               type="button"
@@ -274,6 +333,22 @@ export function SeccionAlmacenamiento({ modo, onCambiar }: Props) {
               Dejarla ahí
             </button>
           </div>
+        </div>
+      )}
+
+      {/* El cambio a local ya tuvo efecto aquí; lo que falta es que se entere la
+          cuenta. Tiene su propio reintento porque no hay que repetir nada más. */}
+      {cuentaSinAvisar && (
+        <div className="flex flex-col gap-2 rounded-lg border border-[var(--aviso-borde)] bg-[var(--aviso-bg)] p-3">
+          <p className="text-sm text-[var(--aviso)]">{cuentaSinAvisar}</p>
+          <button
+            type="button"
+            className="toque-12 rounded-md border border-[var(--border)] px-4 text-sm disabled:opacity-40 sm:self-start"
+            disabled={trabajando}
+            onClick={() => void avisarCuentaLocal()}
+          >
+            Reintentar avisar a mi cuenta
+          </button>
         </div>
       )}
 

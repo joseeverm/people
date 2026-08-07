@@ -33,7 +33,19 @@ import { haySupabase, supabase } from './supabase';
 /** Código de Postgres para violación de unique/PK. */
 const CLAVE_DUPLICADA = '23505';
 
-/** Cuántas operaciones como mucho por pasada, para no bloquear la UI. */
+/**
+ * Cuántas operaciones se leen de Dexie de una vez. NO es un tope de la pasada:
+ * `subirUnaVez` sigue pidiendo lotes hasta vaciar la cola.
+ *
+ * Antes sí era un tope (se subía UN lote y se devolvía), y era un fallo con
+ * dientes: al pasar de local a nube, `encolarTodoLoLocal()` encola todo el
+ * historial de golpe —cientos de operaciones en cuanto hay unas pocas personas
+ * con señales— y de ahí solo subían las primeras 200. El resto se quedaba
+ * esperando al tic de 3 minutos, un lote cada vez, sin que nada lo dijera: el
+ * usuario veía "listo, ahora también en la nube" y en el servidor faltaba la
+ * mayor parte de sus datos. Con conexión intermitente o cerrando la app antes
+ * de tiempo, podía no llegar nunca.
+ */
 const LOTE = 200;
 
 /** Filas por página del pull. PostgREST corta en 1000 por defecto; 500 deja
@@ -446,40 +458,57 @@ async function subirUnaVez(): Promise<ResultadoSubida> {
   const userId = data.session?.user.id;
   if (!userId) return { ...base, sinConexion: true, error: 'Sin sesión activa.' };
 
-  const operaciones = await repo.operacionesPendientes(LOTE);
   let subidas = 0;
   let primerError: string | null = null;
 
-  for (const op of operaciones) {
-    if (op.id === undefined) continue;
-    let fallo: { code?: string; message: string } | null;
-    try {
-      fallo = await aplicar(op, userId);
-    } catch (e) {
-      // supabase-js normalmente devuelve el error en vez de lanzarlo; si lanza,
-      // es un fallo de transporte.
-      fallo = { message: e instanceof Error ? e.message : String(e) };
+  // Lote a lote HASTA VACIAR la cola. Las operaciones que salen bien se borran,
+  // así que el siguiente `operacionesPendientes` devuelve las que faltan; el
+  // bucle termina cuando no queda nada o cuando un lote entero fracasa.
+  for (;;) {
+    const operaciones = await repo.operacionesPendientes(LOTE);
+    if (operaciones.length === 0) break;
+
+    // Las que fallan se quedan en la cola y vuelven a salir al frente del lote
+    // siguiente. Si NINGUNA del lote avanza, seguir pidiéndolo sería un bucle
+    // infinito pidiendo lo mismo — así que esto es la condición de parada.
+    let avanceEnElLote = 0;
+
+    for (const op of operaciones) {
+      if (op.id === undefined) continue;
+      let fallo: { code?: string; message: string } | null;
+      try {
+        fallo = await aplicar(op, userId);
+      } catch (e) {
+        // supabase-js normalmente devuelve el error en vez de lanzarlo; si lanza,
+        // es un fallo de transporte.
+        fallo = { message: e instanceof Error ? e.message : String(e) };
+      }
+
+      if (!fallo) {
+        await repo.descartarOperacion(op.id);
+        subidas++;
+        avanceEnElLote++;
+        continue;
+      }
+
+      await repo.marcarIntentoFallido(op.id, fallo.message);
+      primerError ??= fallo.message;
+
+      // Sin red no tiene sentido seguir quemando la cola: todas fallarían igual.
+      if (esFalloDeRed(fallo)) {
+        return {
+          subidas,
+          pendientes: await repo.contarPendientes(),
+          error: null,
+          sinConexion: true,
+        };
+      }
+      // Cualquier otro fallo es de ESTA fila: se sigue con la siguiente.
     }
 
-    if (!fallo) {
-      await repo.descartarOperacion(op.id);
-      subidas++;
-      continue;
-    }
-
-    await repo.marcarIntentoFallido(op.id, fallo.message);
-    primerError ??= fallo.message;
-
-    // Sin red no tiene sentido seguir quemando la cola: todas fallarían igual.
-    if (esFalloDeRed(fallo)) {
-      return {
-        subidas,
-        pendientes: await repo.contarPendientes(),
-        error: null,
-        sinConexion: true,
-      };
-    }
-    // Cualquier otro fallo es de ESTA fila: se sigue con la siguiente.
+    // Lote entero rechazado (todas envenenadas). Se para y se informa; el
+    // reintento llegará en la próxima pasada, no dando vueltas aquí.
+    if (avanceEnElLote === 0) break;
   }
 
   return {

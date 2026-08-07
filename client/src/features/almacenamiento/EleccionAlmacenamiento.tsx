@@ -13,12 +13,19 @@
  *
  * Todo en lenguaje llano: ni "sincronización", ni "servidor" a secas, ni
  * "cifrado". Quien usa esto no tiene por qué saber qué es un outbox.
+ *
+ * La elección se guarda en la CUENTA, no en el dispositivo, así que `onElegir`
+ * es asíncrono y puede fallar. Si falla no se entra: una elección que no llegó
+ * a la cuenta volvería a preguntarse en el siguiente dispositivo, que es el
+ * fallo que este flujo existe para cerrar. Llegar hasta aquí ya implica que el
+ * servidor respondió hace un momento (así se supo que nadie había elegido),
+ * así que un fallo aquí es transitorio y reintentar tiene sentido.
  */
 import { useState } from 'react';
 import type { ModoAlmacenamiento } from '../../data/modo-almacenamiento';
 
 interface Props {
-  onElegir: (modo: ModoAlmacenamiento) => void;
+  onElegir: (modo: ModoAlmacenamiento) => Promise<void>;
 }
 
 function IconoDispositivo() {
@@ -59,6 +66,25 @@ function IconoNube() {
 
 export function EleccionAlmacenamiento({ onElegir }: Props) {
   const [elegido, setElegido] = useState<ModoAlmacenamiento | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function confirmar() {
+    if (!elegido) return;
+    setGuardando(true);
+    setError(null);
+    try {
+      await onElegir(elegido);
+    } catch (e) {
+      setError(
+        'No se pudo guardar tu elección en tu cuenta: ' +
+          (e instanceof Error ? e.message : String(e)) +
+          ' Inténtalo otra vez.'
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center gap-6 p-6">
@@ -128,11 +154,17 @@ export function EleccionAlmacenamiento({ onElegir }: Props) {
       <button
         type="button"
         className="toque-12 rounded-md bg-[var(--accent)] px-4 font-medium text-[var(--accent-texto)] disabled:cursor-not-allowed disabled:opacity-40"
-        disabled={!elegido}
-        onClick={() => elegido && onElegir(elegido)}
+        disabled={!elegido || guardando}
+        onClick={confirmar}
       >
-        {elegido ? 'Continuar' : 'Elige una opción'}
+        {guardando ? 'Guardando…' : elegido ? 'Continuar' : 'Elige una opción'}
       </button>
+
+      {error && (
+        <p className="rounded-lg border border-[var(--error-borde)] bg-[var(--error-bg)] p-3 text-sm text-[var(--error)]">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
